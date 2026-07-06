@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Leejolt Panel — Sign In</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body class="auth-body">
+
+  <div class="pulse-field" aria-hidden="true">
+    <svg class="pulse-line" viewBox="0 0 1200 200" preserveAspectRatio="none">
+      <path class="pulse-path" d="M0,100 L200,100 L220,40 L240,160 L260,100 L500,100 L520,60 L540,140 L560,100 L800,100 L820,20 L840,180 L860,100 L1200,100" />
+    </svg>
+  </div>
+
+  <main class="auth-card">
+    <div class="auth-brand">
+      <span class="brand-mark">LJ</span>
+      <span class="brand-name">Leejolt Panel</span>
+    </div>
+
+    <h1 class="auth-title">Sign in</h1>
+    <p class="auth-subtitle">Enter your details to access your dashboard.</p>
+
+    <form id="loginForm" class="auth-form" novalidate>
+      <label class="field">
+        <span class="field-label">Email</span>
+        <input type="email" id="email" name="email" placeholder="you@example.com" required autocomplete="email" />
+      </label>
+
+      <label class="field">
+        <span class="field-label">Password</span>
+        <input type="password" id="password" name="password" placeholder="••••••••" required autocomplete="current-password" />
+      </label>
+
+      <p id="formError" class="form-error" role="alert"></p>
+
+      <button type="submit" class="btn-primary">Sign in</button>
+    </form>
+
+    <p class="auth-footer">
+      Don't have an account? <a href="register.html">Create one</a>
+    </p>
+  </main>
+
+  <script type="module" src="js/firebase.js"></script>
+  <script type="module" src="js/auth.js"></script>
+</body>
+</html>
