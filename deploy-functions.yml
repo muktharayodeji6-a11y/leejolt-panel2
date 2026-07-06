@@ -1,0 +1,51 @@
+name: Deploy Firebase Functions
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "functions/**"
+      - ".github/workflows/deploy-functions.yml"
+  workflow_dispatch: {}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Firebase CLI
+        run: npm install -g firebase-tools
+
+      - name: Install function dependencies
+        working-directory: functions
+        run: npm install
+
+      - name: Write service account key to file
+        run: echo "$FIREBASE_SERVICE_ACCOUNT" > /tmp/service-account.json
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+
+      - name: Set Betalogs API key secret
+        if: ${{ env.BETALOGS_API_KEY != '' }}
+        run: |
+          echo "$BETALOGS_API_KEY" | firebase functions:secrets:set BETALOGS_API_KEY \
+            --project leejolt-panel --data-file=- --force
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: /tmp/service-account.json
+          BETALOGS_API_KEY: ${{ secrets.BETALOGS_API_KEY }}
+
+      - name: Deploy functions
+        run: firebase deploy --only functions --project leejolt-panel --non-interactive
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: /tmp/service-account.json
+
+      - name: Clean up credentials
+        if: always()
+        run: rm -f /tmp/service-account.json
