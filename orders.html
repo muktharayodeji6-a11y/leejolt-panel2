@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Orders — Leejolt Panel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body data-require-auth>
+
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="auth-brand">
+        <span class="brand-mark">LJ</span>
+        <span class="brand-name">Leejolt Panel</span>
+      </div>
+      <a class="nav-link" href="dashboard.html">Dashboard</a>
+      <a class="nav-link active" href="orders.html">Orders</a>
+      <a class="nav-link" href="wallet.html">Wallet</a>
+      <a class="nav-link" href="profile.html">Profile</a>
+      <a class="nav-link" href="#" data-logout>Sign out</a>
+    </aside>
+
+    <main class="main-content">
+      <h1 class="page-title">Orders</h1>
+
+      <div class="stat-card" style="margin-bottom: 24px;">
+        <div class="stat-label" style="margin-bottom: 14px;">New order</div>
+        <form id="newOrderForm" class="auth-form" novalidate>
+          <label class="field">
+            <span class="field-label">Service</span>
+            <select id="service" name="service" required>
+              <option value="">Select a service</option>
+              <option value="instagram_followers">Instagram Followers</option>
+              <option value="instagram_likes">Instagram Likes</option>
+              <option value="instagram_views">Instagram Reel Views</option>
+              <option value="tiktok_followers">TikTok Followers</option>
+              <option value="tiktok_likes">TikTok Likes</option>
+              <option value="tiktok_views">TikTok Views</option>
+            </select>
+          </label>
+
+          <label class="field">
+            <span class="field-label">Link</span>
+            <input type="url" id="link" name="link" placeholder="https://instagram.com/..." required />
+          </label>
+
+          <label class="field">
+            <span class="field-label">Quantity</span>
+            <input type="number" id="quantity" name="quantity" min="100" step="100" placeholder="e.g. 1000" required />
+          </label>
+
+          <p id="orderError" class="form-error" role="alert"></p>
+          <p id="orderSuccess" class="form-error" style="color: var(--green); display:none;"></p>
+
+          <button type="submit" class="btn-primary">Submit order</button>
+        </form>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-label" style="margin-bottom: 14px;">Order history</div>
+        <div id="ordersTable" style="color: var(--text-muted); font-size: 14px;">
+          Loading orders...
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script type="module" src="js/firebase.js"></script>
+  <script type="module" src="js/auth.js"></script>
+  <script type="module" src="js/orders.js"></script>
+</body>
+</html>
