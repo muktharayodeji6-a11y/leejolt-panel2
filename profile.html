@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Profile — Leejolt Panel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body data-require-auth>
+
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="auth-brand">
+        <span class="brand-mark">LJ</span>
+        <span class="brand-name">Leejolt Panel</span>
+      </div>
+      <a class="nav-link" href="dashboard.html">Dashboard</a>
+      <a class="nav-link" href="orders.html">Orders</a>
+      <a class="nav-link" href="wallet.html">Wallet</a>
+      <a class="nav-link active" href="profile.html">Profile</a>
+      <a class="nav-link" href="#" data-logout>Sign out</a>
+    </aside>
+
+    <main class="main-content">
+      <h1 class="page-title">Profile</h1>
+
+      <div class="stat-card" style="max-width: 480px;">
+        <form id="profileForm" class="auth-form" novalidate>
+          <label class="field">
+            <span class="field-label">Full name</span>
+            <input type="text" id="fullName" name="fullName" />
+          </label>
+
+          <label class="field">
+            <span class="field-label">Email</span>
+            <input type="email" id="email" name="email" disabled />
+          </label>
+
+          <p id="profileError" class="form-error" role="alert"></p>
+          <p id="profileSuccess" class="form-error" style="color: var(--green); display:none;"></p>
+
+          <button type="submit" class="btn-primary">Save changes</button>
+        </form>
+      </div>
+    </main>
+  </div>
+
+  <script type="module" src="js/firebase.js"></script>
+  <script type="module" src="js/auth.js"></script>
+  <script type="module" src="js/profile.js"></script>
+</body>
+</html>
