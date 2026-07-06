@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Wallet — Leejolt Panel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body data-require-auth>
+
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="auth-brand">
+        <span class="brand-mark">LJ</span>
+        <span class="brand-name">Leejolt Panel</span>
+      </div>
+      <a class="nav-link" href="dashboard.html">Dashboard</a>
+      <a class="nav-link" href="orders.html">Orders</a>
+      <a class="nav-link active" href="wallet.html">Wallet</a>
+      <a class="nav-link" href="profile.html">Profile</a>
+      <a class="nav-link" href="#" data-logout>Sign out</a>
+    </aside>
+
+    <main class="main-content">
+      <h1 class="page-title">Wallet</h1>
+
+      <div class="stat-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
+        <div class="stat-card">
+          <div class="stat-label">Current balance</div>
+          <div class="stat-value" id="walletBalance">₦0.00</div>
+        </div>
+      </div>
+
+      <div class="stat-card" style="margin-bottom: 24px;">
+        <div class="stat-label" style="margin-bottom: 10px;">Fund your wallet</div>
+        <p style="color: var(--text-muted); font-size: 14px; margin: 0 0 16px;">
+          Transfer to the account below, then submit your payment reference. Your balance will be credited by an admin once confirmed — this usually takes a few minutes.
+        </p>
+
+        <div style="background:#0F1215; border:1px solid var(--panel-border); border-radius:10px; padding:16px; margin-bottom:18px; font-size:14px;">
+          <div><strong>Bank:</strong> <span id="bankName">Your Bank Name</span></div>
+          <div><strong>Account name:</strong> <span id="accountName">Leejolt / Leejoker</span></div>
+          <div><strong>Account number:</strong> <span id="accountNumber">0000000000</span></div>
+        </div>
+
+        <form id="topupForm" class="auth-form" novalidate>
+          <label class="field">
+            <span class="field-label">Amount sent (₦)</span>
+            <input type="number" id="amount" name="amount" min="100" step="1" placeholder="e.g. 5000" required />
+          </label>
+
+          <label class="field">
+            <span class="field-label">Payment reference / sender name</span>
+            <input type="text" id="reference" name="reference" placeholder="e.g. transfer ref or your bank name" required />
+          </label>
+
+          <p id="topupError" class="form-error" role="alert"></p>
+          <p id="topupSuccess" class="form-error" style="color: var(--green); display:none;"></p>
+
+          <button type="submit" class="btn-primary">Submit for confirmation</button>
+        </form>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-label" style="margin-bottom: 14px;">Top-up history</div>
+        <div id="topupsList" style="color: var(--text-muted); font-size: 14px;">
+          Loading...
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script type="module" src="js/firebase.js"></script>
+  <script type="module" src="js/auth.js"></script>
+  <script type="module" src="js/wallet.js"></script>
+</body>
+</html>
