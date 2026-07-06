@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Admin — Users</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/style.css" />
+<link rel="stylesheet" href="../css/admin.css" />
+</head>
+<body data-require-admin>
+
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="auth-brand">
+        <span class="brand-mark">LJ</span>
+        <span class="brand-name">Admin</span>
+      </div>
+      <a class="nav-link" href="dashboard.html">Overview</a>
+      <a class="nav-link active" href="users.html">Users</a>
+      <a class="nav-link" href="orders.html">Orders</a>
+      <a class="nav-link" href="settings.html">Settings</a>
+      <a class="nav-link" href="../dashboard.html">Back to panel</a>
+      <a class="nav-link" href="#" data-logout>Sign out</a>
+    </aside>
+
+    <main class="main-content">
+      <h1 class="page-title">Users</h1>
+
+      <div class="stat-card">
+        <div class="table-wrap">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Wallet balance</th>
+                <th>Role</th>
+                <th>Joined</th>
+              </tr>
+            </thead>
+            <tbody id="usersTableBody">
+              <tr><td colspan="5">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script type="module" src="../js/firebase.js"></script>
+  <script type="module" src="../js/auth.js"></script>
+  <script type="module" src="../js/admin.js"></script>
+</body>
+</html>

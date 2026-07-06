@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Admin — Settings</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/style.css" />
+<link rel="stylesheet" href="../css/admin.css" />
+</head>
+<body data-require-admin>
+
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="auth-brand">
+        <span class="brand-mark">LJ</span>
+        <span class="brand-name">Admin</span>
+      </div>
+      <a class="nav-link" href="dashboard.html">Overview</a>
+      <a class="nav-link" href="users.html">Users</a>
+      <a class="nav-link" href="orders.html">Orders</a>
+      <a class="nav-link active" href="settings.html">Settings</a>
+      <a class="nav-link" href="../dashboard.html">Back to panel</a>
+      <a class="nav-link" href="#" data-logout>Sign out</a>
+    </aside>
+
+    <main class="main-content">
+      <h1 class="page-title">Settings</h1>
+
+      <div class="stat-card" style="max-width: 480px;">
+        <div class="stat-label" style="margin-bottom: 14px;">Bank transfer details</div>
+        <p style="color: var(--text-muted); font-size: 13px; margin: 0 0 16px;">
+          Shown to users on the wallet top-up page.
+        </p>
+        <form id="settingsForm" class="auth-form" novalidate>
+          <label class="field">
+            <span class="field-label">Bank name</span>
+            <input type="text" id="bankName" name="bankName" />
+          </label>
+          <label class="field">
+            <span class="field-label">Account name</span>
+            <input type="text" id="accountName" name="accountName" />
+          </label>
+          <label class="field">
+            <span class="field-label">Account number</span>
+            <input type="text" id="accountNumber" name="accountNumber" />
+          </label>
+
+          <p id="settingsError" class="form-error" role="alert"></p>
+          <p id="settingsSuccess" class="form-error" style="color: var(--green); display:none;"></p>
+
+          <button type="submit" class="btn-primary">Save settings</button>
+        </form>
+      </div>
+    </main>
+  </div>
+
+  <script type="module" src="../js/firebase.js"></script>
+  <script type="module" src="../js/auth.js"></script>
+  <script type="module" src="../js/admin.js"></script>
+</body>
+</html>
