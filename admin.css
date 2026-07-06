@@ -1,0 +1,57 @@
+/* admin.css — extra styles specific to the admin section */
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.admin-table th {
+  text-align: left;
+  color: var(--text-muted);
+  font-weight: 500;
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--panel-border);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.admin-table td {
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--panel-border);
+  vertical-align: middle;
+}
+
+.badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.badge-pending { background: rgba(232, 176, 75, 0.15); color: var(--gold); }
+.badge-completed, .badge-confirmed { background: rgba(62, 207, 142, 0.15); color: var(--green); }
+.badge-rejected, .badge-failed { background: rgba(232, 84, 75, 0.15); color: var(--red); }
+.badge-processing, .badge-in_progress { background: rgba(139, 147, 161, 0.15); color: var(--text-muted); }
+
+.btn-small {
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--panel-border);
+  background: #1A1E24;
+  color: var(--text);
+  font-size: 13px;
+  cursor: pointer;
+  margin-right: 6px;
+}
+
+.btn-small:hover { background: #22262D; }
+.btn-small.approve { color: var(--green); border-color: rgba(62,207,142,0.3); }
+.btn-small.reject { color: var(--red); border-color: rgba(232,84,75,0.3); }
+
+.table-wrap {
+  overflow-x: auto;
+}
