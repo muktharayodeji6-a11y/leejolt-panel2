@@ -218,3 +218,302 @@ async function processDueBatches(env) {
       });
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
+      await firestorePatchByPath(env, accessToken, batch.name, {
+        status: "sent",
+        betalogsOrderId: data.order || null,
+        sentAt: new Date().toISOString(),
+      });
+
+      const orderPath = `orders/${batch.fields.orderId}`;
+      const order = await firestoreGet(env, accessToken, orderPath);
+      if (order) {
+        const deliveredBatches = (order.deliveredBatches || 0) + 1;
+        const deliveredQuantity = (order.deliveredQuantity || 0) + batch.fields.quantity;
+        const isDone = deliveredBatches >= (order.totalBatches || 1);
+        await firestorePatch(env, accessToken, orderPath, {
+          deliveredBatches,
+          deliveredQuantity,
+          status: isDone ? "completed" : "processing",
+        });
+      }
+    } catch (err) {
+      console.error(`Batch ${batch.name} failed:`, err.message);
+      await firestorePatchByPath(env, accessToken, batch.name, {
+        status: "failed",
+        failureReason: err.message || "Unknown error",
+      });
+    }
+  }
+}
+
+// ==================================================================
+// Firebase ID token verification (no Firebase Admin SDK available here)
+// ==================================================================
+let cachedJWKS = null;
+let cachedJWKSAt = 0;
+
+async function getGoogleJWKS() {
+  if (cachedJWKS && Date.now() - cachedJWKSAt < 3600 * 1000) return cachedJWKS;
+  const res = await fetch(
+    "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com"
+  );
+  const data = await res.json();
+  cachedJWKS = data.keys;
+  cachedJWKSAt = Date.now();
+  return cachedJWKS;
+}
+
+function base64urlToUint8Array(str) {
+  const padded = str.replace(/-/g, "+").replace(/_/g, "/") + "===".slice((str.length + 3) % 4);
+  const binary = atob(padded);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+}
+
+function base64urlDecodeJSON(str) {
+  return JSON.parse(new TextDecoder().decode(base64urlToUint8Array(str)));
+}
+
+async function verifyFirebaseIdToken(idToken, projectId) {
+  const parts = idToken.split(".");
+  if (parts.length !== 3) throw new Error("Malformed token");
+
+  const header = base64urlDecodeJSON(parts[0]);
+  const payload = base64urlDecodeJSON(parts[1]);
+  const signature = base64urlToUint8Array(parts[2]);
+  const signedData = new TextEncoder().encode(`${parts[0]}.${parts[1]}`);
+
+  const jwks = await getGoogleJWKS();
+  const jwk = jwks.find((k) => k.kid === header.kid);
+  if (!jwk) throw new Error("No matching signing key found");
+
+  const key = await crypto.subtle.importKey(
+    "jwk",
+    jwk,
+    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+    false,
+    ["verify"]
+  );
+
+  const valid = await crypto.subtle.verify("RSASSA-PKCS1-v1_5", key, signature, signedData);
+  if (!valid) throw new Error("Invalid token signature");
+
+  const now = Math.floor(Date.now() / 1000);
+  if (payload.exp < now) throw new Error("Token expired");
+  if (payload.iss !== `https://securetoken.google.com/${projectId}`) throw new Error("Invalid issuer");
+  if (payload.aud !== projectId) throw new Error("Invalid audience");
+  if (!payload.sub) throw new Error("Missing subject");
+
+  return payload;
+}
+
+// ==================================================================
+// Firestore REST access via a service account (Web Crypto JWT signing)
+// ==================================================================
+let cachedAccessToken = null;
+let cachedAccessTokenExp = 0;
+
+function pemToArrayBuffer(pem) {
+  const b64 = pem
+    .replace(/-----BEGIN PRIVATE KEY-----/, "")
+    .replace(/-----END PRIVATE KEY-----/, "")
+    .replace(/\s+/g, "");
+  const binary = atob(b64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes.buffer;
+}
+
+function base64urlEncode(bufferOrString) {
+  let bytes;
+  if (typeof bufferOrString === "string") {
+    bytes = new TextEncoder().encode(bufferOrString);
+  } else {
+    bytes = new Uint8Array(bufferOrString);
+  }
+  let binary = "";
+  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+async function getFirestoreAccessToken(env) {
+  if (cachedAccessToken && Date.now() / 1000 < cachedAccessTokenExp - 60) {
+    return cachedAccessToken;
+  }
+
+  const serviceAccount = JSON.parse(env.FIREBASE_SERVICE_ACCOUNT);
+  const now = Math.floor(Date.now() / 1000);
+
+  const header = { alg: "RS256", typ: "JWT" };
+  const claimSet = {
+    iss: serviceAccount.client_email,
+    scope: "https://www.googleapis.com/auth/datastore",
+    aud: "https://oauth2.googleapis.com/token",
+    iat: now,
+    exp: now + 3600,
+  };
+
+  const unsignedToken = `${base64urlEncode(JSON.stringify(header))}.${base64urlEncode(
+    JSON.stringify(claimSet)
+  )}`;
+
+  const key = await crypto.subtle.importKey(
+    "pkcs8",
+    pemToArrayBuffer(serviceAccount.private_key),
+    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+
+  const signature = await crypto.subtle.sign(
+    "RSASSA-PKCS1-v1_5",
+    key,
+    new TextEncoder().encode(unsignedToken)
+  );
+
+  const jwt = `${unsignedToken}.${base64urlEncode(signature)}`;
+
+  const res = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
+      assertion: jwt,
+    }),
+  });
+
+  const data = await res.json();
+  if (!data.access_token) throw new Error("Failed to get Firestore access token");
+
+  cachedAccessToken = data.access_token;
+  cachedAccessTokenExp = now + (data.expires_in || 3600);
+  return cachedAccessToken;
+}
+
+function firestoreValueToJS(fields) {
+  const out = {};
+  for (const [key, val] of Object.entries(fields || {})) {
+    if ("stringValue" in val) out[key] = val.stringValue;
+    else if ("integerValue" in val) out[key] = parseInt(val.integerValue, 10);
+    else if ("doubleValue" in val) out[key] = val.doubleValue;
+    else if ("booleanValue" in val) out[key] = val.booleanValue;
+    else if ("nullValue" in val) out[key] = null;
+    else if ("timestampValue" in val) out[key] = val.timestampValue;
+    else out[key] = val;
+  }
+  return out;
+}
+
+function jsToFirestoreFields(obj) {
+  const fields = {};
+  for (const [key, val] of Object.entries(obj)) {
+    if (val === null || val === undefined) fields[key] = { nullValue: null };
+    else if (typeof val === "number") {
+      fields[key] = Number.isInteger(val) ? { integerValue: val } : { doubleValue: val };
+    } else if (typeof val === "boolean") fields[key] = { booleanValue: val };
+    else fields[key] = { stringValue: String(val) };
+  }
+  return fields;
+}
+
+async function firestoreGet(env, accessToken, path) {
+  const url = `https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID}/databases/(default)/documents/${path}`;
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
+  if (res.status === 404) return null;
+  const data = await res.json();
+  if (!data.fields) return null;
+  return firestoreValueToJS(data.fields);
+}
+
+async function firestoreCreate(env, accessToken, collectionPath, obj) {
+  const url = `https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID}/databases/(default)/documents/${collectionPath}`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ fields: jsToFirestoreFields(obj) }),
+  });
+  return res.json();
+}
+
+async function firestorePatch(env, accessToken, path, obj) {
+  const fieldNames = Object.keys(obj);
+  const maskParams = fieldNames.map((f) => `updateMask.fieldPaths=${f}`).join("&");
+  const url = `https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID}/databases/(default)/documents/${path}?${maskParams}`;
+  const res = await fetch(url, {
+    method: "PATCH",
+    headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ fields: jsToFirestoreFields(obj) }),
+  });
+  return res.json();
+}
+
+// Same as firestorePatch, but `fullPath` is already the full document
+// resource name returned by a query (used for batch docs).
+async function firestorePatchByPath(env, accessToken, fullResourceName, obj) {
+  const fieldNames = Object.keys(obj);
+  const maskParams = fieldNames.map((f) => `updateMask.fieldPaths=${f}`).join("&");
+  const base = fullResourceName.split("/documents/")[1];
+  const url = `https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID}/databases/(default)/documents/${base}?${maskParams}`;
+  const res = await fetch(url, {
+    method: "PATCH",
+    headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ fields: jsToFirestoreFields(obj) }),
+  });
+  return res.json();
+}
+
+// Queries across ALL "batches" subcollections (collection group query)
+// for ones that are pending and due, oldest first, capped at the
+// two-at-a-time processing limit.
+async function firestoreQueryDueBatches(env, accessToken) {
+  const url = `https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID}/databases/(default)/documents:runQuery`;
+  const nowISO = new Date().toISOString();
+
+  const body = {
+    structuredQuery: {
+      from: [{ collectionId: "batches", allDescendants: true }],
+      where: {
+        compositeFilter: {
+          op: "AND",
+          filters: [
+            { fieldFilter: { field: { fieldPath: "status" }, op: "EQUAL", value: { stringValue: "pending" } } },
+            { fieldFilter: { field: { fieldPath: "scheduledAt" }, op: "LESS_THAN_OR_EQUAL", value: { timestampValue: nowISO } } },
+          ],
+        },
+      },
+      orderBy: [{ field: { fieldPath: "scheduledAt" }, direction: "ASCENDING" }],
+      limit: BATCH_PROCESS_LIMIT,
+    },
+  };
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+  const results = await res.json();
+
+  return (results || [])
+    .filter((r) => r.document)
+    .map((r) => ({ name: r.document.name, fields: firestoreValueToJS(r.document.fields) }));
+}
+
+// ==================================================================
+// Small helpers
+// ==================================================================
+function jsonResponse(obj, status = 200) {
+  return new Response(JSON.stringify(obj), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
+function corsResponse(env, response) {
+  const headers = new Headers(response.headers);
+  headers.set("Access-Control-Allow-Origin", env.ALLOWED_ORIGIN || "*");
+  headers.set("Access-Control-Allow-Methods", "POST, OPTIONS");
+  headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  return new Response(response.body, { status: response.status, headers });
+      }
