@@ -1,17 +1,17 @@
 /**
- * Leejolt Panel - Cloudflare Worker
+ * Leejolt Panel — Cloudflare Worker
  * ------------------------------------------------------------------
  * Replaces the Firebase Cloud Function bridge. Runs entirely on
- * Cloudflare's free tier - no card required.
+ * Cloudflare's free tier — no card required.
  *
  * Two jobs, one file:
  *
- * 1. fetch handler - an HTTP endpoint the frontend calls (with the
+ * 1. fetch handler — an HTTP endpoint the frontend calls (with the
  *    user's Firebase ID token) right after creating a "pending" order
  *    doc + deducting wallet balance. Splits the order into randomized
  *    drip-feed batches and schedules them in Firestore.
  *
- * 2. scheduled handler - runs on a Cron Trigger (set in the Cloudflare
+ * 2. scheduled handler — runs on a Cron Trigger (set in the Cloudflare
  *    dashboard, e.g. every 10 minutes). Sends up to 2 due batches to
  *    Betalogs and updates progress on the parent order.
  *
@@ -189,7 +189,7 @@ function assignScheduleTimes(count) {
 async function processDueBatches(env) {
   const currentWATHour = watHourOf(new Date());
   if (currentWATHour >= QUIET_HOUR_START_WAT && currentWATHour < QUIET_HOUR_END_WAT) {
-    console.log("Quiet hours - skipping this run.");
+    console.log("Quiet hours — skipping this run.");
     return;
   }
 
@@ -214,7 +214,12 @@ async function processDueBatches(env) {
       const res = await fetch(BETALOGS_API_URL, {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        await firestorePatchByPath(env, accessToken, batch.name, {
+        body: params.toString(),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
+
+      await firestorePatchByPath(env, accessToken, batch.name, {
         status: "sent",
         betalogsOrderId: data.order || null,
         sentAt: new Date().toISOString(),
@@ -513,7 +518,4 @@ function corsResponse(env, response) {
   headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
   return new Response(response.body, { status: response.status, headers });
     }
-        body: params.toString(),
-      });
-      const data = await res.json();
-      if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
+  
