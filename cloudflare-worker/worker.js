@@ -1,17 +1,17 @@
 /**
- * Leejolt Panel — Cloudflare Worker
+ * Leejolt Panel - Cloudflare Worker
  * ------------------------------------------------------------------
  * Replaces the Firebase Cloud Function bridge. Runs entirely on
- * Cloudflare's free tier — no card required.
+ * Cloudflare's free tier - no card required.
  *
  * Two jobs, one file:
  *
- * 1. fetch handler — an HTTP endpoint the frontend calls (with the
+ * 1. fetch handler - an HTTP endpoint the frontend calls (with the
  *    user's Firebase ID token) right after creating a "pending" order
  *    doc + deducting wallet balance. Splits the order into randomized
  *    drip-feed batches and schedules them in Firestore.
  *
- * 2. scheduled handler — runs on a Cron Trigger (set in the Cloudflare
+ * 2. scheduled handler - runs on a Cron Trigger (set in the Cloudflare
  *    dashboard, e.g. every 10 minutes). Sends up to 2 due batches to
  *    Betalogs and updates progress on the parent order.
  *
@@ -27,22 +27,19 @@
  */
 
 // TODO: replace with your real Betalogs API endpoint
-const BETALOGS_API_URL = "https://betalogs.example/api/v2";
+const BETALOGS_API_URL = "https://betalogs.com/api/smm/v1";
 
-// TODO: replace with your real Betalogs service IDs
-const SERVICE_MAP = {
-  instagram_followers: 1001,
-  instagram_likes: 1002,
-  instagram_views: 1003,
-  tiktok_followers: 2001,
-  tiktok_likes: 2002,
-  tiktok_views: 2003,
-};
+// In-memory cache for the Betalogs service list (per Worker isolate)
+let cachedServices = null;
+let cachedServicesAt = 0;
+const SERVICES_CACHE_MS = 10 * 60 * 1000; // 10 minutes
 
 // ---- Drip-feed configuration ----
 const QUIET_HOUR_START_WAT = 0;   // 12am
 const QUIET_HOUR_END_WAT = 6;     // 6am
-const DELIVERY_WINDOW_HOURS = 24;
+const DELIVERY_WINDOW_HOURS = 24;   // fallback default if no deadline given
+const MIN_WINDOW_MINUTES = 15;      // deadline can't be sooner than this
+const MAX_WINDOW_DAYS = 14;         // deadline can't be further than this
 const BATCH_MIN = 100;
 const BATCH_MAX = 300;
 const BATCH_PROCESS_LIMIT = 2;
@@ -56,6 +53,18 @@ export default {
     if (request.method === "OPTIONS") {
       return corsResponse(env, new Response(null, { status: 204 }));
     }
+
+    // GET = public service list, no auth needed, just pricing/catalog data.
+    if (request.method === "GET") {
+      try {
+        const services = await getBetalogsServices(env);
+        return corsResponse(env, jsonResponse({ services }));
+      } catch (err) {
+        console.error(err);
+        return corsResponse(env, jsonResponse({ error: "Could not load services" }, 502));
+      }
+    }
+
     if (request.method !== "POST") {
       return corsResponse(env, jsonResponse({ error: "Method not allowed" }, 405));
     }
@@ -71,13 +80,36 @@ export default {
       const uid = decoded.sub;
 
       const body = await request.json();
-      const { orderId, service, link, quantity } = body;
+      const { orderId, serviceId, link, quantity, completeBy, startOffsetMinutes } = body;
 
-      if (!orderId || !service || !link || !quantity) {
+      if (!orderId || !serviceId || !link || !quantity) {
         return corsResponse(env, jsonResponse({ error: "Missing required fields" }, 400));
       }
-      if (!SERVICE_MAP[service]) {
-        return corsResponse(env, jsonResponse({ error: "Unknown service" }, 400));
+
+      // Work out the delivery window: either the person's chosen deadline,
+      // clamped to sane min/max bounds, or the default 24h window.
+      let windowMs = DELIVERY_WINDOW_HOURS * 3600 * 1000;
+      if (completeBy) {
+        const deadlineMs = new Date(completeBy).getTime() - Date.now();
+        if (isNaN(deadlineMs)) {
+          return corsResponse(env, jsonResponse({ error: "Invalid deadline" }, 400));
+        }
+        const minMs = MIN_WINDOW_MINUTES * 60 * 1000;
+        const maxMs = MAX_WINDOW_DAYS * 24 * 3600 * 1000;
+        if (deadlineMs < minMs) {
+          return corsResponse(env, jsonResponse({ error: `Deadline must be at least ${MIN_WINDOW_MINUTES} minutes from now` }, 400));
+        }
+        windowMs = Math.min(deadlineMs, maxMs);
+      }
+
+      // For multi-service "growth plan" orders sharing one link, each
+      // service can start a bit later than the last so engagement types
+      // land in a staggered, natural-looking order (e.g. views first,
+      // then likes, then follows) instead of all at once.
+      const offsetMs = Math.max(0, (startOffsetMinutes || 0) * 60 * 1000);
+      const remainingWindowMs = windowMs - offsetMs;
+      if (remainingWindowMs < MIN_WINDOW_MINUTES * 60 * 1000) {
+        return corsResponse(env, jsonResponse({ error: "Not enough time left in the window for this service's stagger position" }, 400));
       }
 
       const accessToken = await getFirestoreAccessToken(env);
@@ -91,12 +123,12 @@ export default {
       }
 
       const batchSizes = generateBatchPlan(quantity);
-      const scheduleTimes = assignScheduleTimes(batchSizes.length);
+      const scheduleTimes = assignScheduleTimes(batchSizes.length, remainingWindowMs, offsetMs);
 
       for (let i = 0; i < batchSizes.length; i++) {
         await firestoreCreate(env, accessToken, `orders/${orderId}/batches`, {
           orderId,
-          service,
+          serviceId,
           link,
           quantity: batchSizes[i],
           scheduledAt: scheduleTimes[i].toISOString(),
@@ -123,6 +155,23 @@ export default {
     ctx.waitUntil(processDueBatches(env));
   },
 };
+
+// Fetches (and caches) the live Betalogs service catalog.
+async function getBetalogsServices(env) {
+  if (cachedServices && Date.now() - cachedServicesAt < SERVICES_CACHE_MS) {
+    return cachedServices;
+  }
+
+  const params = new URLSearchParams({ key: env.BETALOGS_API_KEY, action: "services" });
+  const res = await fetch(`${BETALOGS_API_URL}?${params.toString()}`);
+  const data = await res.json();
+
+  if (!Array.isArray(data)) throw new Error("Unexpected services response");
+
+  cachedServices = data;
+  cachedServicesAt = Date.now();
+  return data;
+}
 
 // ==================================================================
 // Drip-feed batch planning
@@ -159,9 +208,8 @@ function avoidQuietHours(date) {
   return date;
 }
 
-function assignScheduleTimes(count) {
-  const now = Date.now();
-  const windowMs = DELIVERY_WINDOW_HOURS * 3600 * 1000;
+function assignScheduleTimes(count, windowMs, startOffsetMs = 0) {
+  const now = Date.now() + startOffsetMs;
   const slice = windowMs / count;
   const times = [];
 
@@ -189,7 +237,7 @@ function assignScheduleTimes(count) {
 async function processDueBatches(env) {
   const currentWATHour = watHourOf(new Date());
   if (currentWATHour >= QUIET_HOUR_START_WAT && currentWATHour < QUIET_HOUR_END_WAT) {
-    console.log("Quiet hours — skipping this run.");
+    console.log("Quiet hours - skipping this run.");
     return;
   }
 
@@ -206,16 +254,12 @@ async function processDueBatches(env) {
       const params = new URLSearchParams({
         key: env.BETALOGS_API_KEY,
         action: "add",
-        service: String(SERVICE_MAP[batch.fields.service]),
+        service: String(batch.fields.serviceId),
         link: batch.fields.link,
         quantity: String(batch.fields.quantity),
       });
 
-      const res = await fetch(BETALOGS_API_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: params.toString(),
-      });
+      const res = await fetch(`${BETALOGS_API_URL}?${params.toString()}`);
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
 
@@ -490,32 +534,4 @@ async function firestoreQueryDueBatches(env, accessToken) {
 
   const res = await fetch(url, {
     method: "POST",
-    headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-
-  const results = await res.json();
-
-  return (results || [])
-    .filter((r) => r.document)
-    .map((r) => ({ name: r.document.name, fields: firestoreValueToJS(r.document.fields) }));
-}
-
-// ==================================================================
-// Small helpers
-// ==================================================================
-function jsonResponse(obj, status = 200) {
-  return new Response(JSON.stringify(obj), {
-    status,
-    headers: { "Content-Type": "application/json" },
-  });
-}
-
-function corsResponse(env, response) {
-  const headers = new Headers(response.headers);
-  headers.set("Access-Control-Allow-Origin", env.ALLOWED_ORIGIN || "*");
-  headers.set("Access-Control-Allow-Methods", "POST, OPTIONS");
-  headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
-  return new Response(response.body, { status: response.status, headers });
-    }
-  
+    headers
