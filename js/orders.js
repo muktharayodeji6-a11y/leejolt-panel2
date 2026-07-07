@@ -2,8 +2,6 @@
 import {
   db,
   auth,
-  functions,
-  httpsCallable,
   doc,
   getDoc,
   updateDoc,
@@ -16,9 +14,26 @@ import {
   increment
 } from "./firebase.js";
 
-// Calls the "createOrder" Cloud Function, which holds the real
-// Betalogs API key server-side (via Firebase Secrets) and forwards the order.
-const createOrderFn = httpsCallable(functions, "createOrder");
+// The deployed Cloudflare Worker that holds the real Betalogs API key
+// server-side and plans the drip-feed batches for this order.
+const ORDER_WORKER_URL = "https://leejolt-panel2.muktharayodeji6.workers.dev";
+
+// Calls the Cloudflare Worker, which holds the real Betalogs API key
+// server-side and plans the drip-feed batches for this order.
+async function createOrderViaWorker(orderId, service, link, quantity) {
+  const idToken = await auth.currentUser.getIdToken();
+  const res = await fetch(ORDER_WORKER_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${idToken}`
+    },
+    body: JSON.stringify({ orderId, service, link, quantity })
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Worker request failed");
+  return data;
+}
 
 const SERVICE_PRICES = {
   instagram_followers: 5,   // ₦ per unit
@@ -90,17 +105,12 @@ if (form) {
         createdAt: serverTimestamp()
       });
 
-      // Notify the Cloud Function to place the order with Betalogs.
+      // Notify the Cloudflare Worker to plan the drip-feed batches for this order.
       // If this fails, the order stays "pending" and an admin can retry manually.
       try {
-        await createOrderFn({
-          orderId: orderDoc.id,
-          service,
-          link,
-          quantity
-        });
+        await createOrderViaWorker(orderDoc.id, service, link, quantity);
       } catch (apiErr) {
-        console.warn("Order saved but Cloud Function call failed, will need manual review:", apiErr);
+        console.warn("Order saved but Worker call failed, will need manual review:", apiErr);
       }
 
       successEl.textContent = "Order submitted successfully.";
@@ -149,3 +159,4 @@ document.addEventListener("authReady", (e) => {
       .join("");
   });
 });
+  
