@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8" />
+<title>Worker Test</title>
+</head>
+<body style="font-family: monospace; padding: 16px; word-break: break-all;">
+  <h3>Testing Worker service endpoint...</h3>
+  <div id="output">Loading...</div>
+
+  <script>
+    const WORKER_URL = "https://leejolt-panel2.muktharayodeji6.workers.dev";
+
+    fetch(WORKER_URL, { method: "GET" })
+      .then(async (res) => {
+        const text = await res.text();
+        document.getElementById("output").innerHTML =
+          "<b>Status:</b> " + res.status + "<br><br>" +
+          "<b>Raw response:</b><br>" +
+          "<pre style='white-space: pre-wrap;'>" + text.replace(/</g, "&lt;") + "</pre>";
+      })
+      .catch((err) => {
+        document.getElementById("output").innerHTML =
+          "<b>Fetch error:</b><br>" + err.message;
+      });
+  </script>
+</body>
+</html>
