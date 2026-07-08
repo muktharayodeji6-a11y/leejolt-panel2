@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8" />
+<title>Balance Test</title>
+</head>
+<body style="font-family: monospace; padding: 16px; word-break: break-all;">
+  <h3>Testing Worker balance endpoint...</h3>
+  <div id="output">Waiting for login check...</div>
+
+  <script type="module">
+    import { auth, onAuthStateChanged } from "./js/firebase.js";
+
+    const WORKER_URL = "https://leejolt-panel2.muktharayodeji6.workers.dev";
+    const output = document.getElementById("output");
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        output.innerHTML = "Not signed in. Log in on index.html first, then reload this page.";
+        return;
+      }
+
+      output.innerHTML = "Signed in as " + user.email + "<br>Getting ID token...";
+
+      try {
+        const idToken = await user.getIdToken();
+        output.innerHTML += "<br>Token acquired (" + idToken.length + " chars). Calling Worker...";
+
+        const res = await fetch(`${WORKER_URL}?type=balance`, {
+          headers: { Authorization: `Bearer ${idToken}` }
+        });
+        const text = await res.text();
+
+        output.innerHTML =
+          "<b>Status:</b> " + res.status + "<br><br>" +
+          "<b>Raw response:</b><br>" +
+          "<pre style='white-space: pre-wrap;'>" + text.replace(/</g, "&lt;") + "</pre>";
+      } catch (err) {
+        output.innerHTML += "<br><b>Error:</b> " + err.message;
+      }
+    });
+  </script>
+</body>
+</html>
