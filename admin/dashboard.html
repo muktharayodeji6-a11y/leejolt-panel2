@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Admin — Leejolt Panel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/style.css" />
+<link rel="stylesheet" href="../css/admin.css" />
+</head>
+<body data-require-admin>
+
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="auth-brand">
+        <span class="brand-mark">LJ</span>
+        <span class="brand-name">Admin</span>
+      </div>
+      <a class="nav-link active" href="dashboard.html">Overview</a>
+      <a class="nav-link" href="users.html">Users</a>
+      <a class="nav-link" href="orders.html">Orders</a>
+      <a class="nav-link" href="settings.html">Settings</a>
+      <a class="nav-link" href="../dashboard.html">Back to panel</a>
+      <a class="nav-link" href="#" data-logout>Sign out</a>
+    </aside>
+
+    <main class="main-content">
+      <h1 class="page-title">Overview</h1>
+
+      <div class="stat-grid">
+        <div class="stat-card">
+          <div class="stat-label">Total users</div>
+          <div class="stat-value" id="totalUsers">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Total orders</div>
+          <div class="stat-value" id="totalOrders">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Pending orders</div>
+          <div class="stat-value" id="pendingOrders">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Pending top-ups</div>
+          <div class="stat-value" id="pendingTopups">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Betalogs balance</div>
+          <div class="stat-value" id="betalogsBalance">-</div>
+        </div>
+      </div>
+
+      <div class="stat-card" style="margin-bottom: 24px;">
+        <div class="stat-label" style="margin-bottom: 10px;">Batch processing</div>
+        <button id="processNowBtn" class="btn-primary" style="width: auto; padding: 10px 20px;">Process batches now</button>
+        <div id="processResult" style="margin-top: 12px; font-size: 13px; color: var(--text-muted); white-space: pre-wrap;"></div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-label" style="margin-bottom: 14px;">Pending top-up requests</div>
+        <div id="pendingTopupsList" style="font-size: 14px;">Loading...</div>
+      </div>
+    </main>
+  </div>
+
+  <script type="module" src="../js/firebase.js"></script>
+  <script type="module" src="../js/auth.js"></script>
+  <script type="module" src="../js/admin.js"></script>
+</body>
+</html>
