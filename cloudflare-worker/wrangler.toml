@@ -2,5 +2,9 @@ name = "leejolt-panel2"
 main = "worker.js"
 compatibility_date = "2024-11-01"
 
+[vars]
+FIREBASE_PROJECT_ID = "leejolt-panel"
+ALLOWED_ORIGIN = "https://muktharayodeji6-a11y.github.io"
+
 [triggers]
 crons = ["*/10 * * * *"]
