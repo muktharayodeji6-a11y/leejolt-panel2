@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8" />
+<title>Debug Test</title>
+</head>
+<body style="font-family: monospace; padding: 16px; word-break: break-all;">
+  <h3>Raw batch data for an order</h3>
+  <p>Order ID: <input type="text" id="orderIdInput" style="width: 250px;" /> <button id="goBtn">Go</button></p>
+  <div id="output">Enter an order ID above (find it in Firebase Console -> Firestore -> orders collection -> copy the document ID).</div>
+
+  <script type="module">
+    import { auth, onAuthStateChanged } from "./js/firebase.js";
+
+    const WORKER_URL = "https://leejolt-panel2.muktharayodeji6.workers.dev";
+    const output = document.getElementById("output");
+    let currentUser = null;
+
+    onAuthStateChanged(auth, (user) => {
+      currentUser = user;
+      if (!user) output.innerHTML = "Not signed in. Log in on index.html first.";
+    });
+
+    document.getElementById("goBtn").addEventListener("click", async () => {
+      if (!currentUser) {
+        output.innerHTML = "Not signed in.";
+        return;
+      }
+      const orderId = document.getElementById("orderIdInput").value.trim();
+      if (!orderId) return;
+
+      output.innerHTML = "Loading...";
+      try {
+        const idToken = await currentUser.getIdToken();
+        const res = await fetch(`${WORKER_URL}?type=debug&orderId=${encodeURIComponent(orderId)}`, {
+          headers: { Authorization: `Bearer ${idToken}` }
+        });
+        const text = await res.text();
+        output.innerHTML =
+          "<b>Status:</b> " + res.status + "<br><br>" +
+          "<pre style='white-space: pre-wrap;'>" + text.replace(/</g, "&lt;") + "</pre>";
+      } catch (err) {
+        output.innerHTML = "Error: " + err.message;
+      }
+    });
+  </script>
+</body>
+</html>
