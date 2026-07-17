@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8" />
+<title>TheKclaut Test</title>
+</head>
+<body style="font-family: monospace; padding: 16px; word-break: break-all;">
+  <h3>Testing TheKclaut endpoints...</h3>
+
+  <h4>Balance</h4>
+  <div id="balanceOutput">Loading...</div>
+
+  <h4>Services (first part of response)</h4>
+  <div id="servicesOutput">Loading...</div>
+
+  <script type="module">
+    import { auth, onAuthStateChanged } from "./js/firebase.js";
+
+    const WORKER_URL = "https://leejolt-panel2.muktharayodeji6.workers.dev";
+    const balanceOutput = document.getElementById("balanceOutput");
+    const servicesOutput = document.getElementById("servicesOutput");
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        balanceOutput.innerHTML = "Not signed in. Log in on index.html first, then reload this page.";
+        servicesOutput.innerHTML = "";
+        return;
+      }
+
+      try {
+        const idToken = await user.getIdToken();
+
+        const balRes = await fetch(`${WORKER_URL}?type=tk-balance`, {
+          headers: { Authorization: `Bearer ${idToken}` }
+        });
+        const balText = await balRes.text();
+        balanceOutput.innerHTML =
+          "<b>Status:</b> " + balRes.status + "<br>" +
+          "<pre style='white-space: pre-wrap;'>" + balText.replace(/</g, "&lt;") + "</pre>";
+
+        const svcRes = await fetch(`${WORKER_URL}?type=tk-services`, {
+          headers: { Authorization: `Bearer ${idToken}` }
+        });
+        const svcText = await svcRes.text();
+        servicesOutput.innerHTML =
+          "<b>Status:</b> " + svcRes.status + "<br>" +
+          "<pre style='white-space: pre-wrap;'>" + svcText.slice(0, 3000).replace(/</g, "&lt;") + "</pre>";
+      } catch (err) {
+        balanceOutput.innerHTML = "Error: " + err.message;
+      }
+    });
+  </script>
+</body>
+</html>
