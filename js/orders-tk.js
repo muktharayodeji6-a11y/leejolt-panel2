@@ -26,7 +26,7 @@ const MIN_STAGGER_MINUTES = 20; // each service should visibly start after the l
 // Your main growth-plan services - fixed selection, live pricing pulled
 // from the Betalogs catalog each time so rates/min/max stay accurate.
 const FAVORITE_SERVICES = [
-  { id: "7847", label: "Views" },
+  { id: "11649", label: "Views" },
   { id: "11240", label: "Likes" },
   { id: "11493", label: "Saves" },
   { id: "11343", label: "Reposts" }
