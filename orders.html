@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Orders - Leejolt Panel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body data-require-auth>
+
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="auth-brand">
+        <span class="brand-mark">LJ</span>
+        <span class="brand-name">Leejolt Panel</span>
+      </div>
+      <a class="nav-link" href="dashboard.html">Dashboard</a>
+      <a class="nav-link active" href="orders.html">Orders (Betalogs)</a>
+      <a class="nav-link" href="orders-tk.html">Orders (TheKclaut)</a>
+      <a class="nav-link" href="wallet.html">Wallet</a>
+      <a class="nav-link" href="profile.html">Profile</a>
+      <a class="nav-link" href="#" data-logout>Sign out</a>
+    </aside>
+
+    <main class="main-content">
+      <h1 class="page-title">Orders</h1>
+
+      <div class="stat-card" style="margin-bottom: 24px;">
+        <div class="stat-label" style="margin-bottom: 4px;">Growth plan</div>
+        <p style="color: var(--text-muted); font-size: 13px; margin: 0 0 16px;">
+          One link, your 4 main services (Likes, Reposts, Saves, Views) - fill in only the ones you want, leave the rest blank. Each one starts a little after the last so it lands like natural growth instead of everything at once.
+        </p>
+
+        <form id="newOrderForm" class="auth-form" novalidate>
+          <label class="field">
+            <span class="field-label">Link</span>
+            <input type="url" id="link" name="link" placeholder="https://instagram.com/reel/..." required />
+          </label>
+
+          <div id="serviceRows"></div>
+
+          <label class="field">
+            <span class="field-label">Complete within</span>
+            <div style="display:flex; gap:8px;">
+              <input type="number" id="completeByValue" name="completeByValue" min="0.25" step="0.25" placeholder="e.g. 3" required style="flex:1;" />
+              <select id="completeByUnit" name="completeByUnit" style="flex:0 0 auto;">
+                <option value="hours">Hours</option>
+                <option value="days" selected>Days</option>
+              </select>
+            </div>
+          </label>
+
+          <p id="estimatedCost" style="color: var(--text-muted); font-size: 13px; margin: -8px 0 0;"></p>
+
+          <p id="orderError" class="form-error" role="alert"></p>
+          <p id="orderSuccess" class="form-error" style="color: var(--green); display:none;"></p>
+
+          <button type="submit" class="btn-primary">Submit growth plan</button>
+        </form>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-label" style="margin-bottom: 14px;">Order history</div>
+        <div id="ordersTable" style="color: var(--text-muted); font-size: 14px;">
+          Loading orders...
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script type="module" src="js/firebase.js"></script>
+  <script type="module" src="js/auth.js"></script>
+  <script type="module" src="js/orders.js"></script>
+</body>
+</html>
