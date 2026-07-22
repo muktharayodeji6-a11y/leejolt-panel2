@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Screenshots → Scroll Recording</title>
+<style>
+  :root {
+    --bg: #0b0b0d;
+    --fg: #f3f1ec;
+    --accent: #d3ff5a;
+    --muted: #8a8a8f;
+    --card: #17171a;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  .wrap { max-width: 520px; margin: 0 auto; padding: 20px 16px 60px; }
+  h1 { font-size: 19px; font-weight: 700; margin: 0 0 4px; }
+  p.sub { color: var(--muted); font-size: 13px; margin: 0 0 20px; line-height: 1.5; }
+
+  .card { background: var(--card); border-radius: 16px; padding: 16px; margin-bottom: 14px; }
+
+  #dropZone {
+    border: 1.5px dashed rgba(255,255,255,0.2);
+    border-radius: 14px;
+    padding: 28px 16px;
+    text-align: center;
+    cursor: pointer;
+  }
+  #dropZone button#chooseBtn {
+    display: inline-block;
+    background: var(--accent);
+    color: #0b0b0d;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 20px;
+    font-weight: 700;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  #dropZone input {
+    position: absolute;
+    width: 1px; height: 1px;
+    opacity: 0;
+    overflow: hidden;
+    pointer-events: none;
+  }
+  #dropZone .hint { color: var(--muted); font-size: 12px; margin-top: 10px; }
+
+  #thumbs { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+  .thumb {
+    position: relative;
+    width: 62px; height: 110px;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #000;
+  }
+  .thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .thumb .order {
+    position: absolute; top: 3px; left: 3px;
+    background: rgba(0,0,0,0.7);
+    color: #fff; font-size: 10px; font-weight: 700;
+    padding: 1px 5px; border-radius: 6px;
+  }
+  .thumb .moves {
+    position: absolute; bottom: 3px; right: 3px;
+    display: flex; gap: 2px;
+  }
+  .thumb button {
+    width: 18px; height: 18px;
+    border: none; border-radius: 4px;
+    background: rgba(0,0,0,0.7); color: #fff;
+    font-size: 10px; line-height: 1;
+    cursor: pointer;
+  }
+
+  label.field { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+  input[type="range"] { width: 100%; }
+  .row { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+
+  button#generateBtn {
+    width: 100%;
+    padding: 13px;
+    border: none;
+    border-radius: 12px;
+    background: var(--accent);
+    color: #0b0b0d;
+    font-weight: 700;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  button#generateBtn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  #progressWrap { display: none; margin-top: 12px; }
+  #progressBar { height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden; }
+  #progressFill { height: 100%; width: 0%; background: var(--accent); transition: width 0.1s linear; }
+  #progressLabel { font-size: 12px; color: var(--muted); margin-top: 6px; text-align: center; }
+
+  #outputWrap { display: none; margin-top: 16px; text-align: center; }
+  #outputVideo {
+    max-width: 260px;
+    width: 100%;
+    border-radius: 20px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+  a#downloadLink {
+    display: inline-block;
+    margin-top: 14px;
+    background: var(--fg);
+    color: #0b0b0d;
+    padding: 10px 20px;
+    border-radius: 20px;
+    font-weight: 700;
+    font-size: 13px;
+    text-decoration: none;
+  }
+
+  #stageCanvas { display: none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Screenshots → Scroll Recording</h1>
+  <p class="sub">Upload your screenshots in order, and this renders a real downloadable video that looks like a smooth screen recording scrolling through them — status bar, home indicator, and all.</p>
+
+  <div class="card">
+    <div id="dropZone">
+      <button type="button" id="chooseBtn">Choose screenshots</button>
+      <input id="fileInput" type="file" accept="image/*" multiple>
+      <div class="hint">Select up to 10, in the order you want them to play</div>
+    </div>
+    <div id="thumbs"></div>
+  </div>
+
+  <div class="card">
+    <label class="field">Seconds per photo</label>
+    <div class="row"><span id="speedVal">1.5s</span><span id="totalLenLabel">— total</span></div>
+    <input type="range" id="speedSlider" min="0.8" max="3" step="0.1" value="1.5">
+  </div>
+
+  <button id="generateBtn" disabled>Generate video</button>
+
+  <div id="progressWrap">
+    <div id="progressBar"><div id="progressFill"></div></div>
+    <div id="progressLabel">Rendering…</div>
+  </div>
+
+  <div id="outputWrap">
+    <video id="outputVideo" playsinline muted controls loop></video><br>
+    <a id="downloadLink">Download video</a>
+  </div>
+</div>
+
+<canvas id="stageCanvas" width="1080" height="2340"></canvas>
+
+<script>
+const fileInput = document.getElementById('fileInput');
+const chooseBtn = document.getElementById('chooseBtn');
+chooseBtn.addEventListener('click', () => fileInput.click());
+const thumbsEl = document.getElementById('thumbs');
+const generateBtn = document.getElementById('generateBtn');
+const speedSlider = document.getElementById('speedSlider');
+const speedVal = document.getElementById('speedVal');
+const totalLenLabel = document.getElementById('totalLenLabel');
+const progressWrap = document.getElementById('progressWrap');
+const progressFill = document.getElementById('progressFill');
+const progressLabel = document.getElementById('progressLabel');
+const outputWrap = document.getElementById('outputWrap');
+const outputVideo = document.getElementById('outputVideo');
+const downloadLink = document.getElementById('downloadLink');
+const canvas = document.getElementById('stageCanvas');
+const ctx = canvas.getContext('2d');
+
+let imageFiles = []; // { dataUrl, img }
+let secPerPhoto = parseFloat(speedSlider.value);
+
+speedSlider.addEventListener('input', () => {
+  secPerPhoto = parseFloat(speedSlider.value);
+  speedVal.textContent = `${secPerPhoto.toFixed(1)}s`;
+  updateTotalLenLabel();
+});
+
+fileInput.addEventListener('change', (e) => {
+  const files = Array.from(e.target.files || []).slice(0, 10);
+  if (!files.length) return;
+  imageFiles = [];
+  thumbsEl.innerHTML = '';
+  generateBtn.disabled = true;
+
+  let loaded = 0;
+  files.forEach((file) => {
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const img = new Image();
+      img.onload = () => {
+        imageFiles.push({ dataUrl: ev.target.result, img });
+        loaded++;
+        if (loaded === files.length) {
+          renderThumbs();
+          updateTotalLenLabel();
+          generateBtn.disabled = imageFiles.length === 0;
+        }
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+});
+
+function renderThumbs() {
+  thumbsEl.innerHTML = '';
+  imageFiles.forEach((item, i) => {
+    const div = document.createElement('div');
+    div.className = 'thumb';
+    div.innerHTML = `
+      <img src="${item.dataUrl}">
+      <div class="order">${i + 1}</div>
+      <div class="moves">
+        <button data-dir="-1" data-i="${i}">◀</button>
+        <button data-dir="1" data-i="${i}">▶</button>
+      </div>`;
+    thumbsEl.appendChild(div);
+  });
+  thumbsEl.querySelectorAll('button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const i = parseInt(btn.dataset.i);
+      const dir = parseInt(btn.dataset.dir);
+      const j = i + dir;
+      if (j < 0 || j >= imageFiles.length) return;
+      [imageFiles[i], imageFiles[j]] = [imageFiles[j], imageFiles[i]];
+      renderThumbs();
+    });
+  });
+}
+
+function updateTotalLenLabel() {
+  const total = imageFiles.length * secPerPhoto;
+  totalLenLabel.textContent = `${total.toFixed(1)}s total`;
+}
+
+// --- Canvas drawing helpers ---
+function drawCover(img, x, y, w, h) {
+  const imgRatio = img.width / img.height;
+  const rectRatio = w / h;
+  let sx, sy, sw, sh;
+  if (imgRatio > rectRatio) {
+    sh = img.height; sw = sh * rectRatio;
+    sx = (img.width - sw) / 2; sy = 0;
+  } else {
+    sw = img.width; sh = sw / rectRatio;
+    sx = 0; sy = (img.height - sh) / 2;
+  }
+  ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h);
+}
+
+function drawImageTransformed(item, progress, role, W, H) {
+  ctx.save();
+  let scale, translateY, alpha;
+  if (role === 'out') {
+    scale = 1 - progress * 0.12;
+    translateY = -progress * 46 * (H / 844);
+    alpha = 1 - progress * 0.85;
+  } else {
+    scale = 0.9 + progress * 0.1;
+    translateY = (1 - progress) * 70 * (H / 844);
+    alpha = Math.min(1, progress * 1.4);
+  }
+  ctx.globalAlpha = alpha;
+  ctx.translate(W / 2, H / 2 + translateY);
+  ctx.scale(scale, scale);
+  ctx.translate(-W / 2, -H / 2);
+  drawCover(item.img, 0, 0, W, H);
+  ctx.restore();
+}
+
+function drawStatusBar(W, H) {
+  ctx.globalAlpha = 1;
+  const now = new Date();
+  let h = now.getHours();
+  const m = String(now.getMinutes()).padStart(2, '0');
+  h = h % 12 || 12;
+  const clock = `${h}:${m}`;
+
+  const scale = W / 390;
+  ctx.save();
+  ctx.scale(scale, scale);
+
+  // subtle top gradient for legibility
+  const grad = ctx.createLinearGradient(0, 0, 0, 70);
+  grad.addColorStop(0, 'rgba(0,0,0,0.35)');
+  grad.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 390, 70);
+
+  ctx.fillStyle = '#fff';
+  ctx.font = '600 15px -apple-system, sans-serif';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(clock, 26, 27);
+
+  // notch
+  ctx.fillStyle = '#000';
+  roundRect(195 - 60, 6, 120, 24, 14);
+  ctx.fill();
+
+  // signal bars
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(300, 20, 3, 5);
+  ctx.fillRect(305, 18, 3, 7);
+  ctx.fillRect(310, 15, 3, 10);
+  ctx.fillRect(315, 12, 3, 13);
+
+  // wifi (simple arc)
+  ctx.beginPath();
+  ctx.arc(330, 25, 8, Math.PI * 1.2, Math.PI * 1.8);
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = '#fff';
+  ctx.stroke();
+
+  // battery
+  ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+  ctx.lineWidth = 1;
+  roundRectStroke(347, 14, 20, 11, 2.5);
+  ctx.fillStyle = '#fff';
+  roundRect(349, 16, 15, 7, 1.5);
+  ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.5)';
+  ctx.fillRect(368, 17, 1.5, 4);
+
+  ctx.restore();
+}
+
+function drawHomeIndicator(W, H) {
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = 'rgba(255,255,255,0.85)';
+  const w = W * 0.34, hgt = H * 0.006;
+  roundRect((W - w) / 2, H - hgt - H * 0.012, w, hgt, hgt / 2);
+  ctx.fill();
+}
+
+function roundRect(x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+function roundRectStroke(x, y, w, h, r) {
+  roundRect(x, y, w, h, r);
+  ctx.stroke();
+}
+
+// --- Recording ---
+generateBtn.addEventListener('click', () => {
+  if (!imageFiles.length) return;
+  generateBtn.disabled = true;
+  progressWrap.style.display = 'block';
+  outputWrap.style.display = 'none';
+  progressFill.style.width = '0%';
+
+  const W = canvas.width, H = canvas.height;
+  const unitMs = secPerPhoto * 1000;
+  const totalMs = imageFiles.length * unitMs;
+
+  const stream = canvas.captureStream(30);
+  const mimeCandidates = [
+    'video/mp4;codecs=avc1',
+    'video/webm;codecs=vp9',
+    'video/webm;codecs=vp8',
+    'video/webm'
+  ];
+  const mimeType = mimeCandidates.find(t => MediaRecorder.isTypeSupported(t)) || '';
+  const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+  const chunks = [];
+  recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
+  recorder.onstop = () => {
+    const blob = new Blob(chunks, { type: mimeType || 'video/webm' });
+    const url = URL.createObjectURL(blob);
+    outputVideo.src = url;
+    downloadLink.href = url;
+    downloadLink.download = mimeType.includes('mp4') ? 'scroll-recording.mp4' : 'scroll-recording.webm';
+    progressWrap.style.display = 'none';
+    outputWrap.style.display = 'block';
+    generateBtn.disabled = false;
+  };
+
+  let startTime = null;
+  function drawFrame(elapsed) {
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, W, H);
+
+    const rawIndex = elapsed / unitMs;
+    const idx = Math.min(imageFiles.length - 1, Math.max(0, Math.floor(rawIndex)));
+    const progress = Math.min(1, Math.max(0, rawIndex - idx));
+
+    drawImageTransformed(imageFiles[idx], progress, 'out', W, H);
+    if (idx + 1 < imageFiles.length) {
+      drawImageTransformed(imageFiles[idx + 1], progress, 'in', W, H);
+    }
+    drawStatusBar(W, H);
+    drawHomeIndicator(W, H);
+  }
+
+  function loop(now) {
+    if (startTime === null) startTime = now;
+    const elapsed = now - startTime;
+    drawFrame(elapsed);
+    const pct = Math.min(100, (elapsed / totalMs) * 100);
+    progressFill.style.width = pct + '%';
+    progressLabel.textContent = `Rendering… ${Math.round(pct)}%`;
+    if (elapsed < totalMs) {
+      requestAnimationFrame(loop);
+    } else {
+      recorder.stop();
+    }
+  }
+
+  recorder.start();
+  requestAnimationFrame(loop);
+});
+</script>
+</body>
+</html>
