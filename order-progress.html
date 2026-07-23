@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Order Growth — Leejolt Panel</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600&display=swap');
+
+  :root {
+    --bg: #0b0f14;
+    --panel: #121821;
+    --panel-border: #1e2733;
+    --text: #e7ecf2;
+    --muted: #7c8794;
+    --accent: #4fd1c5;
+    --accent-dim: #2a5f5a;
+    --target: #f2b84b;
+    --fail: #e0616f;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', system-ui, sans-serif;
+    min-height: 100vh;
+    padding: 24px 16px 60px;
+  }
+
+  .wrap {
+    max-width: 780px;
+    margin: 0 auto;
+  }
+
+  .setup {
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 20px;
+  }
+
+  .setup label {
+    display: block;
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 4px;
+    letter-spacing: 0.02em;
+  }
+
+  .setup input {
+    width: 100%;
+    background: #0e1319;
+    border: 1px solid var(--panel-border);
+    color: var(--text);
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    margin-bottom: 12px;
+  }
+
+  .setup button {
+    background: var(--accent);
+    color: #06201d;
+    border: none;
+    font-weight: 600;
+    padding: 9px 18px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  .setup button:hover { filter: brightness(1.08); }
+
+  .header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 18px;
+  }
+
+  .header .eyebrow {
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .header .order-id {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    color: var(--text);
+  }
+
+  .status-pill {
+    display: inline-block;
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.03em;
+  }
+  .status-processing { background: rgba(79,209,197,0.15); color: var(--accent); }
+  .status-completed { background: rgba(242,184,75,0.15); color: var(--target); }
+  .status-cancelled { background: rgba(224,97,111,0.15); color: var(--fail); }
+
+  .hero {
+    display: flex;
+    align-items: flex-end;
+    gap: 14px;
+    margin-bottom: 6px;
+  }
+
+  .hero .count {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 56px;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .hero .dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--accent);
+    margin-bottom: 14px;
+    animation: pulse 1.6s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(79,209,197,0.5); }
+    50% { box-shadow: 0 0 0 6px rgba(79,209,197,0); }
+  }
+
+  .hero .of-target {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 15px;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+
+  .chart-panel {
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 12px;
+    padding: 18px 18px 8px;
+    margin-top: 18px;
+  }
+
+  canvas { width: 100% !important; }
+
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-top: 18px;
+  }
+
+  .stat {
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 10px;
+    padding: 12px 14px;
+  }
+
+  .stat .label {
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 4px;
+  }
+
+  .stat .value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 20px;
+    font-weight: 500;
+  }
+
+  .empty-state {
+    text-align: center;
+    color: var(--muted);
+    padding: 40px 0;
+    font-size: 13px;
+  }
+
+  .error-msg {
+    color: var(--fail);
+    font-size: 12px;
+    margin-top: 8px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="setup" id="setupPanel">
+    <label for="workerUrl">Worker base URL</label>
+    <input id="workerUrl" placeholder="https://your-worker.your-subdomain.workers.dev" />
+
+    <label for="orderId">Order ID</label>
+    <input id="orderId" placeholder="e.g. ord_abc123" />
+
+    <label for="idToken">Firebase ID token</label>
+    <input id="idToken" placeholder="paste the signed-in user's ID token" />
+
+    <button id="startBtn">Track order</button>
+    <div class="error-msg" id="errorMsg"></div>
+  </div>
+
+  <div id="liveView" style="display:none;">
+    <div class="header">
+      <div>
+        <div class="eyebrow">Live delivery</div>
+        <div class="order-id" id="orderIdLabel">—</div>
+      </div>
+      <span class="status-pill" id="statusPill">—</span>
+    </div>
+
+    <div class="hero">
+      <span class="dot"></span>
+      <span class="count" id="deliveredCount">0</span>
+      <span class="of-target" id="ofTarget">/ 0</span>
+    </div>
+
+    <div class="chart-panel">
+      <canvas id="growthChart" height="220"></canvas>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat">
+        <div class="label">Batches sent</div>
+        <div class="value" id="batchesSent">0 / 0</div>
+      </div>
+      <div class="stat">
+        <div class="label">Percent complete</div>
+        <div class="value" id="percentComplete">0%</div>
+      </div>
+      <div class="stat">
+        <div class="label">Last update</div>
+        <div class="value" id="lastUpdate">—</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+let chart = null;
+let pollTimer = null;
+
+document.getElementById('startBtn').addEventListener('click', () => {
+  const workerUrl = document.getElementById('workerUrl').value.trim().replace(/\/$/, '');
+  const orderId = document.getElementById('orderId').value.trim();
+  const idToken = document.getElementById('idToken').value.trim();
+  const errorMsg = document.getElementById('errorMsg');
+  errorMsg.textContent = '';
+
+  if (!workerUrl || !orderId || !idToken) {
+    errorMsg.textContent = 'Fill in all three fields to start tracking.';
+    return;
+  }
+
+  document.getElementById('setupPanel').style.display = 'none';
+  document.getElementById('liveView').style.display = 'block';
+  document.getElementById('orderIdLabel').textContent = orderId;
+
+  initChart();
+  poll(workerUrl, orderId, idToken);
+  pollTimer = setInterval(() => poll(workerUrl, orderId, idToken), 6000);
+});
+
+function initChart() {
+  const ctx = document.getElementById('growthChart').getContext('2d');
+  chart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      datasets: [
+        {
+          label: 'Delivered',
+          data: [],
+          borderColor: '#4fd1c5',
+          backgroundColor: 'rgba(79,209,197,0.08)',
+          borderWidth: 2.5,
+          pointRadius: 0,
+          pointHoverRadius: 4,
+          tension: 0.35,
+          fill: true,
+        },
+        {
+          label: 'Target',
+          data: [],
+          borderColor: '#f2b84b',
+          borderDash: [5, 5],
+          borderWidth: 1.5,
+          pointRadius: 0,
+          fill: false,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      animation: { duration: 400 },
+      scales: {
+        x: {
+          type: 'time',
+          time: { unit: 'hour' },
+          grid: { color: '#1e2733' },
+          ticks: { color: '#7c8794', font: { family: 'JetBrains Mono', size: 10 } },
+        },
+        y: {
+          grid: { color: '#1e2733' },
+          ticks: { color: '#7c8794', font: { family: 'JetBrains Mono', size: 10 } },
+          beginAtZero: true,
+        },
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#121821',
+          titleColor: '#e7ecf2',
+          bodyColor: '#e7ecf2',
+          borderColor: '#1e2733',
+          borderWidth: 1,
+        },
+      },
+    },
+  });
+}
+
+async function poll(workerUrl, orderId, idToken) {
+  const errorMsg = document.getElementById('errorMsg');
+  try {
+    const res = await fetch(`${workerUrl}?type=progress&orderId=${encodeURIComponent(orderId)}`, {
+      headers: { Authorization: `Bearer ${idToken}` },
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      errorMsg.textContent = data.error || 'Failed to fetch progress.';
+      return;
+    }
+    errorMsg.textContent = '';
+
+    document.getElementById('deliveredCount').textContent = data.deliveredQuantity.toLocaleString();
+    document.getElementById('ofTarget').textContent = `/ ${(data.targetQuantity || 0).toLocaleString()}`;
+    document.getElementById('batchesSent').textContent = `${data.deliveredBatches} / ${data.totalBatches}`;
+    const pct = data.targetQuantity ? Math.min(100, Math.round((data.deliveredQuantity / data.targetQuantity) * 100)) : 0;
+    document.getElementById('percentComplete').textContent = `${pct}%`;
+    document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
+
+    const pill = document.getElementById('statusPill');
+    pill.textContent = data.orderStatus || 'processing';
+    pill.className = 'status-pill status-' + (data.orderStatus || 'processing');
+
+    const sentPoints = (data.points || [])
+      .filter(p => p.status === 'sent')
+      .map(p => ({ x: new Date(p.time), y: p.cumulativeDelivered }));
+
+    chart.data.datasets[0].data = sentPoints;
+
+    if (data.points && data.points.length > 0 && data.targetQuantity) {
+      const firstTime = new Date(data.points[0].time);
+      const lastTime = new Date(data.points[data.points.length - 1].time);
+      chart.data.datasets[1].data = [
+        { x: firstTime, y: data.targetQuantity },
+        { x: lastTime, y: data.targetQuantity },
+      ];
+    }
+
+    chart.update();
+
+    if (data.orderStatus === 'completed' || data.orderStatus === 'cancelled') {
+      clearInterval(pollTimer);
+    }
+  } catch (err) {
+    errorMsg.textContent = 'Network error: ' + err.message;
+  }
+}
+</script>
+</body>
+</html>
