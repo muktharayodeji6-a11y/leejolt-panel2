@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>TikTok Views & Likes — Leejolt Panel</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600&display=swap');
+
+  :root {
+    --bg: #0b0f14;
+    --panel: #121821;
+    --panel-border: #1e2733;
+    --text: #e7ecf2;
+    --muted: #7c8794;
+    --accent: #4fd1c5;
+    --accent2: #c084fc;
+    --target: #f2b84b;
+    --fail: #e0616f;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', system-ui, sans-serif;
+    min-height: 100vh;
+    padding: 24px 16px 60px;
+  }
+
+  .wrap { max-width: 820px; margin: 0 auto; }
+
+  h1 { font-size: 18px; font-weight: 600; margin: 0 0 4px; }
+  .subtitle { font-size: 13px; color: var(--muted); margin: 0 0 20px; }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 12px;
+    padding: 18px;
+    margin-bottom: 18px;
+  }
+
+  label {
+    display: block;
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 4px;
+    letter-spacing: 0.02em;
+  }
+
+  input {
+    width: 100%;
+    background: #0e1319;
+    border: 1px solid var(--panel-border);
+    color: var(--text);
+    border-radius: 6px;
+    padding: 9px 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    margin-bottom: 12px;
+  }
+
+  .service-card {
+    border: 1px solid var(--panel-border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .service-card input[type="checkbox"] {
+    width: auto;
+    margin: 0;
+    accent-color: var(--accent);
+  }
+
+  .service-card .service-info { flex: 1; }
+  .service-card .service-name { font-weight: 500; font-size: 14px; margin-bottom: 2px; }
+  .service-card .service-meta { font-size: 11px; color: var(--muted); font-family: 'JetBrains Mono', monospace; }
+  .service-card input[type="number"] { width: 120px; margin: 0; }
+  .service-card.views { border-left: 3px solid var(--accent); }
+  .service-card.likes { border-left: 3px solid var(--accent2); }
+
+  button.submit {
+    background: var(--accent);
+    color: #06201d;
+    border: none;
+    font-weight: 600;
+    padding: 11px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    width: 100%;
+  }
+  button.submit:hover { filter: brightness(1.08); }
+  button.submit:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .error-msg { color: var(--fail); font-size: 12px; margin-top: 8px; }
+  .info-msg { color: var(--muted); font-size: 12px; margin-top: 8px; }
+
+  .tracker { display: none; margin-top: 18px; }
+
+  .tracker-card {
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 12px;
+    padding: 16px 18px;
+    margin-bottom: 16px;
+  }
+
+  .tracker-card .tc-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 10px;
+  }
+  .tracker-card .tc-name { font-size: 13px; font-weight: 600; }
+  .tracker-card.views .tc-name { color: var(--accent); }
+  .tracker-card.likes .tc-name { color: var(--accent2); }
+
+  .status-pill {
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .status-processing { background: rgba(79,209,197,0.15); color: var(--accent); }
+  .status-completed { background: rgba(242,184,75,0.15); color: var(--target); }
+  .status-cancelled { background: rgba(224,97,111,0.15); color: var(--fail); }
+
+  .tc-count {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 32px;
+    font-variant-numeric: tabular-nums;
+  }
+  .tc-of { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--muted); }
+
+  canvas { width: 100% !important; margin-top: 10px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>TikTok Views &amp; Likes</h1>
+  <p class="subtitle">Order both together, then watch delivery happen live.</p>
+
+  <div class="panel" id="orderForm">
+    <label for="workerUrl">Worker base URL</label>
+    <input id="workerUrl" placeholder="https://your-worker.your-subdomain.workers.dev" />
+
+    <label for="idToken">Firebase ID token</label>
+    <input id="idToken" placeholder="paste the signed-in user's ID token" />
+
+    <label for="link">TikTok video link</label>
+    <input id="link" placeholder="https://www.tiktok.com/@user/video/..." />
+
+    <div class="service-card views">
+      <input type="checkbox" id="viewsEnabled" checked />
+      <div class="service-info">
+        <div class="service-name">TikTok Views</div>
+        <div class="service-meta">ChickletBoost · service 5020 · min 100</div>
+      </div>
+      <input type="number" id="viewsQty" placeholder="Quantity" min="100" step="1" />
+    </div>
+
+    <div class="service-card likes">
+      <input type="checkbox" id="likesEnabled" checked />
+      <div class="service-info">
+        <div class="service-name">TikTok Likes</div>
+        <div class="service-meta">TheKclaut · service 11721 · min 10</div>
+      </div>
+      <input type="number" id="likesQty" placeholder="Quantity" min="10" step="1" />
+    </div>
+
+    <button class="submit" id="submitBtn">Place order</button>
+    <div class="error-msg" id="errorMsg"></div>
+    <div class="info-msg" id="infoMsg"></div>
+  </div>
+
+  <div class="tracker" id="tracker"></div>
+</div>
+
+<script>
+const SERVICES = {
+  views: { key: "views", label: "TikTok Views", provider: "chickletboost", serviceId: "5020", min: 100, accentClass: "views" },
+  likes: { key: "likes", label: "TikTok Likes", provider: "thekclaut", serviceId: "11721", min: 10, accentClass: "likes" },
+};
+
+const charts = {};
+const pollTimers = {};
+
+document.getElementById('submitBtn').addEventListener('click', async () => {
+  const workerUrl = document.getElementById('workerUrl').value.trim().replace(/\/$/, '');
+  const idToken = document.getElementById('idToken').value.trim();
+  const link = document.getElementById('link').value.trim();
+  const errorMsg = document.getElementById('errorMsg');
+  const infoMsg = document.getElementById('infoMsg');
+  errorMsg.textContent = '';
+  infoMsg.textContent = '';
+
+  if (!workerUrl || !idToken || !link) {
+    errorMsg.textContent = 'Fill in worker URL, ID token, and the TikTok link.';
+    return;
+  }
+
+  const jobs = [];
+  if (document.getElementById('viewsEnabled').checked) {
+    const qty = parseInt(document.getElementById('viewsQty').value, 10);
+    if (qty && qty >= SERVICES.views.min) jobs.push({ service: SERVICES.views, quantity: qty });
+    else if (document.getElementById('viewsQty').value) {
+      errorMsg.textContent = `Views quantity must be at least ${SERVICES.views.min}.`;
+      return;
+    }
+  }
+  if (document.getElementById('likesEnabled').checked) {
+    const qty = parseInt(document.getElementById('likesQty').value, 10);
+    if (qty && qty >= SERVICES.likes.min) jobs.push({ service: SERVICES.likes, quantity: qty });
+    else if (document.getElementById('likesQty').value) {
+      errorMsg.textContent = `Likes quantity must be at least ${SERVICES.likes.min}.`;
+      return;
+    }
+  }
+
+  if (jobs.length === 0) {
+    errorMsg.textContent = 'Enter a quantity for at least one service.';
+    return;
+  }
+
+  const submitBtn = document.getElementById('submitBtn');
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Placing order...';
+
+  const tracker = document.getElementById('tracker');
+  tracker.innerHTML = '';
+  tracker.style.display = 'block';
+
+  for (const job of jobs) {
+    const orderId = `${job.service.key}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    try {
+      const res = await fetch(workerUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({
+          orderId,
+          serviceId: job.service.serviceId,
+          provider: job.service.provider,
+          serviceMin: job.service.min,
+          link,
+          quantity: job.quantity,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        errorMsg.textContent += `${job.service.label}: ${data.error || 'failed to place order'}. `;
+        continue;
+      }
+      infoMsg.textContent += `${job.service.label} order placed. `;
+      renderTracker(job.service, orderId);
+      startPolling(workerUrl, idToken, job.service, orderId);
+    } catch (err) {
+      errorMsg.textContent += `${job.service.label}: ${err.message}. `;
+    }
+  }
+
+  submitBtn.disabled = false;
+  submitBtn.textContent = 'Place order';
+});
+
+function renderTracker(service, orderId) {
+  const tracker = document.getElementById('tracker');
+  const card = document.createElement('div');
+  card.className = `tracker-card ${service.accentClass}`;
+  card.id = `tc_${service.key}`;
+  card.innerHTML = `
+    <div class="tc-header">
+      <div class="tc-name">${service.label}</div>
+      <span class="status-pill status-processing" id="pill_${service.key}">processing</span>
+    </div>
+    <span class="tc-count" id="count_${service.key}">0</span>
+    <span class="tc-of" id="of_${service.key}">/ 0</span>
+    <canvas id="chart_${service.key}" height="140"></canvas>
+  `;
+  tracker.appendChild(card);
+
+  const ctx = document.getElementById(`chart_${service.key}`).getContext('2d');
+  const lineColor = service.key === 'views' ? '#4fd1c5' : '#c084fc';
+  const fillColor = service.key === 'views' ? 'rgba(79,209,197,0.08)' : 'rgba(192,132,252,0.08)';
+
+  charts[service.key] = new Chart(ctx, {
+    type: 'line',
+    data: {
+      datasets: [
+        { label: 'Delivered', data: [], borderColor: lineColor, backgroundColor: fillColor, borderWidth: 2.5, pointRadius: 0, tension: 0.35, fill: true },
+        { label: 'Target', data: [], borderColor: '#f2b84b', borderDash: [5, 5], borderWidth: 1.5, pointRadius: 0, fill: false },
+      ],
+    },
+    options: {
+      responsive: true,
+      animation: { duration: 400 },
+      scales: {
+        x: { type: 'time', time: { unit: 'hour' }, grid: { color: '#1e2733' }, ticks: { color: '#7c8794', font: { family: 'JetBrains Mono', size: 10 } } },
+        y: { grid: { color: '#1e2733' }, ticks: { color: '#7c8794', font: { family: 'JetBrains Mono', size: 10 } }, beginAtZero: true },
+      },
+      plugins: { legend: { display: false } },
+    },
+  });
+}
+
+function startPolling(workerUrl, idToken, service, orderId) {
+  const poll = async () => {
+    try {
+      const res = await fetch(`${workerUrl}?type=progress&orderId=${encodeURIComponent(orderId)}`, {
+        headers: { Authorization: `Bearer ${idToken}` },
+      });
+      const data = await res.json();
+      if (!res.ok) return;
+
+      document.getElementById(`count_${service.key}`).textContent = data.deliveredQuantity.toLocaleString();
+      document.getElementById(`of_${service.key}`).textContent = `/ ${(data.targetQuantity || 0).toLocaleString()}`;
+
+      const pill = document.getElementById(`pill_${service.key}`);
+      pill.textContent = data.orderStatus || 'processing';
+      pill.className = 'status-pill status-' + (data.orderStatus || 'processing');
+
+      const sentPoints = (data.points || [])
+        .filter(p => p.status === 'sent')
+        .map(p => ({ x: new Date(p.time), y: p.cumulativeDelivered }));
+      charts[service.key].data.datasets[0].data = sentPoints;
+
+      if (data.points && data.points.length > 0 && data.targetQuantity) {
+        const firstTime = new Date(data.points[0].time);
+        const lastTime = new Date(data.points[data.points.length - 1].time);
+        charts[service.key].data.datasets[1].data = [
+          { x: firstTime, y: data.targetQuantity },
+          { x: lastTime, y: data.targetQuantity },
+        ];
+      }
+      charts[service.key].update();
+
+      if (data.orderStatus === 'completed' || data.orderStatus === 'cancelled') {
+        clearInterval(pollTimers[service.key]);
+      }
+    } catch (err) {
+      // silent - next poll will retry
+    }
+  };
+  poll();
+  pollTimers[service.key] = setInterval(poll, 6000);
+}
+</script>
+</body>
+</html>
