@@ -263,10 +263,6 @@ export default {
           return corsResponse(env, jsonResponse({ error: "Could not fetch CB balance: " + (err.message || String(err)) }, 502));
         }
       }
-if (url.searchParams.get("type") === "cb-debug") {
-  const raw = await callChickletBoost(env, "services");
-  return corsResponse(env, jsonResponse({ raw }));
-}
       if (url.searchParams.get("type") === "cb-services") {
         try {
           const authHeader = request.headers.get("Authorization") || "";
