@@ -32,7 +32,7 @@ const FAVORITE_SERVICES = [
   { id: "3772", label: "Likes" },
   { id: "3446", label: "Saves" },
   { id: "3448", label: "Reposts" },
-  { id: "5233", label: "TikTok Views", provider: "chickletboost", minOverride: 100 },
+  { id: "5020", label: "TikTok Views", provider: "chickletboost", minOverride: 100 },
   { id: "11721", label: "TikTok Likes", provider: "thekclaut", minOverride: 10 }
 ];
 
