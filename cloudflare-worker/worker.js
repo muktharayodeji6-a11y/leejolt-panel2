@@ -810,12 +810,13 @@ function randomizeVariableBatchSizes(quantity, batchCount, effectiveMin) {
 const BATCH_INTERVAL_MIN_MINUTES = 55;
 const BATCH_INTERVAL_MAX_MINUTES = 75;
 
-// If quantity/batchCount lands at or near effectiveMin, EVERY batch
-// gets forced down to exactly the minimum - there's no mathematical
-// room to vary sizes when every batch must be >= min and the average
-// already equals min. This factor keeps the average comfortably above
-// the floor (at least 1.5x) so randomizeVariableBatchSizes's +/-30%
-// band has real room to work with, instead of flattening out.
+// Dual-provider (Instagram Views: Betalogs + TheKclaut) gets a tighter
+// ~30 min cadence instead of the 55-75 min walk used everywhere else -
+// batches still land ~25-35 min apart (natural jitter around 30, not a
+// machine-precise fixed grid) and still spread across whatever window
+// the person enters, same walk-until-window-runs-out mechanism.
+const VIEWS_BATCH_INTERVAL_MIN_MINUTES = 25;
+const VIEWS_BATCH_INTERVAL_MAX_MINUTES = 35;
 const VARIANCE_HEADROOM_FACTOR = 1.5;
 
 // Picks `count` entries spread evenly across the full time list,
@@ -887,8 +888,10 @@ function planShortWindowDualProviderBatches(quantity, betalogsMin, thekclautMin,
   const windowEndMs = startDate.getTime() + windowMs;
   const canUseThekclaut = quantity >= thekclautMin;
 
-  // Same 55-75 min interval walk as the single-provider planner -
-  // batch count depends only on how much time fits in the window.
+   // ~30 min interval walk (25-35 min jitter) - tighter cadence than the
+  // single-provider planner's 55-75 min gap. Batch count still comes
+  // purely from how much time fits in the window entered, so a longer
+  // window naturally produces more batches
   const allTimes = [];
   let cursor = startDate.getTime();
   while (true) {
