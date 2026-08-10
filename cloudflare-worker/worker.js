@@ -64,7 +64,7 @@ const BATCH_PROCESS_LIMIT = 2;
 // Keyed as "provider:serviceId". Applied as a floor (Math.max), never
 // lowers a legitimately higher serviceMin sent from the frontend.
 const SERVICE_MIN_OVERRIDES = {
-  "betalogs:3532": 50,
+  "betalogs:3532": 10,
   "chickletboost:5233": 100,
 };
 
@@ -883,64 +883,53 @@ function planScheduleBatches(scheduleIndex, quantity, effectiveMin, windowMs, of
 //
 // If the whole order's quantity can't cover one TheKclaut-minimum
 // batch, TheKclaut is excluded entirely for that order.
+const VIEWS_BATCH_INTERVAL_MIN_MINUTES = 25;
+const VIEWS_BATCH_INTERVAL_MAX_MINUTES = 35;
+const NARROW_BAND_WIDTH = 20;
+
 function planShortWindowDualProviderBatches(quantity, betalogsMin, thekclautMin, windowMs, offsetMs) {
   const startDate = new Date(Date.now() + offsetMs);
   const windowEndMs = startDate.getTime() + windowMs;
   const canUseThekclaut = quantity >= thekclautMin;
 
-   // ~30 min interval walk (25-35 min jitter) - tighter cadence than the
-  // single-provider planner's 55-75 min gap. Batch count still comes
-  // purely from how much time fits in the window entered, so a longer
-  // window naturally produces more batches
   const allTimes = [];
   let cursor = startDate.getTime();
   while (true) {
     allTimes.push(new Date(cursor));
-    const gapMs = randomInt(BATCH_INTERVAL_MIN_MINUTES, BATCH_INTERVAL_MAX_MINUTES) * 60000;
+    const gapMs = randomInt(VIEWS_BATCH_INTERVAL_MIN_MINUTES, VIEWS_BATCH_INTERVAL_MAX_MINUTES) * 60000;
     const next = cursor + gapMs;
     if (next > windowEndMs) break;
     cursor = next;
   }
 
-  // Same variance-headroom cap as the single-provider planner, using
-  // the stricter (higher) of the two active minimums as the reference
-  // - otherwise TheKclaut batches (usually the higher min) would be
-  // the ones that flatten out to exactly their floor.
-  const referenceMin = canUseThekclaut ? Math.max(betalogsMin, thekclautMin) : betalogsMin;
-  const maxBatchesForVariance = Math.max(1, Math.floor(quantity / (referenceMin * VARIANCE_HEADROOM_FACTOR)));
-  const batchCount = Math.min(allTimes.length, maxBatchesForVariance);
-  const scheduleTimes = pickEvenSubset(allTimes, batchCount);
-
-  const batchProviders = Array.from({ length: batchCount }, () =>
-    canUseThekclaut && Math.random() < 0.5 ? "thekclaut" : "betalogs"
-  );
-  const mins = batchProviders.map((p) => (p === "thekclaut" ? thekclautMin : betalogsMin));
-
-  // Same variable-around-the-average sizing as the single-provider
-  // path, but each batch respects its own assigned provider's minimum.
+  const batchProviders = [];
   const batchSizes = [];
   let remaining = quantity;
-  for (let i = 0; i < batchCount; i++) {
-    const batchesLeft = batchCount - i;
-    const thisMin = mins[i];
-    if (batchesLeft === 1) {
-      batchSizes.push(remaining);
+  while (true) {
+    const provider = canUseThekclaut && Math.random() < 0.5 ? "thekclaut" : "betalogs";
+    const thisMin = provider === "thekclaut" ? thekclautMin : betalogsMin;
+
+    if (remaining <= thisMin + NARROW_BAND_WIDTH) {
+      if (batchSizes.length > 0 && remaining < thisMin) {
+        batchSizes[batchSizes.length - 1] += remaining;
+      } else {
+        batchProviders.push(provider);
+        batchSizes.push(remaining);
+      }
       break;
     }
-    const avgRemaining = remaining / batchesLeft;
-    const low = Math.max(thisMin, Math.floor(avgRemaining * 0.7));
-    const high = Math.max(low, Math.ceil(avgRemaining * 1.3));
-    let size = randomInt(low, high);
-    const minNeededForRest = mins.slice(i + 1).reduce((a, b) => a + b, 0);
-    if (remaining - size < minNeededForRest) size = remaining - minNeededForRest;
-    size = Math.max(thisMin, size);
+
+    const size = randomInt(thisMin, thisMin + NARROW_BAND_WIDTH);
+    batchProviders.push(provider);
     batchSizes.push(size);
     remaining -= size;
   }
 
+  const batchCount = batchSizes.length;
+  const scheduleTimes = buildOrganicScheduleTimes(allTimes, batchCount);
+
   return { batchSizes, scheduleTimes, batchProviders };
 }
-
 // scheduleIndex is accepted for backward compatibility (still stored
 // on the order doc by the caller) but no longer used - every window
 // length now goes through the interval-based dual-provider planner.
