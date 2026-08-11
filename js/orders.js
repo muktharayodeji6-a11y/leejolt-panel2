@@ -28,7 +28,7 @@ const MIN_STAGGER_MINUTES = 20; // each service should visibly start after the l
 // stay accurate. Services without an explicit `provider` default to
 // Betalogs (matches the Worker's own default).
 const FAVORITE_SERVICES = [
-  { id: "3532", label: "Views", minOverride: 50 },
+  { id: "3532", label: "Views", minOverride: 10 },
   { id: "3772", label: "Likes" },
   { id: "3446", label: "Saves" },
   { id: "3448", label: "Reposts" },
