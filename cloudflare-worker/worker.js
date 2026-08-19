@@ -53,7 +53,7 @@ const BATCH_MIN = 20;
 // already override to a 50-unit floor for Views on the frontend). Used
 // when a batch gets randomly routed to TheKclaut in dual-provider mode.
 // Can be overridden per-order via `serviceMinThekclaut` in the request.
-const THEKCLAUT_DEFAULT_MIN = 100;
+const THEKCLAUT_DEFAULT_MIN = 50;
 const BATCH_PROCESS_LIMIT = 2;
 
 // Betalogs Instagram Views gets its own fast drip pattern instead of the
