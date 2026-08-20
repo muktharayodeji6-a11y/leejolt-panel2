@@ -2,292 +2,416 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Screenshot Text Editor</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Screenshot Text Editor (OCR)</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/4.1.1/tesseract.min.js"></script>
 <style>
   :root{
-    --bg:#f4f4f5; --card:#ffffff; --line:#e6e6e9; --accent:#1982e3;
-    --text:#111214; --sub:#7a7a80;
+    --bg:#0f1115; --panel:#171a21; --panel2:#1f232c; --border:#2a2f3a;
+    --text:#e8eaed; --muted:#9aa1ac; --accent:#5b8cff; --accent2:#7f5bff;
+    --good:#39d98a; --radius:12px;
   }
   *{box-sizing:border-box;}
   body{
-    margin:0; background:var(--bg); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-    color:var(--text); padding:20px 14px 60px; display:flex; justify-content:center;
+    margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:radial-gradient(1200px 800px at 10% -10%, #1a1e2a 0%, var(--bg) 55%);
+    color:var(--text); min-height:100vh;
   }
-  .wrap{ width:100%; max-width:520px; }
-  h1{ font-size:19px; font-weight:700; margin:0 0 4px; }
-  .sub{ color:var(--sub); font-size:13.5px; margin:0 0 18px; line-height:1.4; }
-
-  .card{ background:var(--card); border-radius:16px; padding:16px; margin-bottom:14px; border:1px solid var(--line); }
-
-  .upload-zone{
-    border:2px dashed #cfcfd4; border-radius:14px; padding:28px 16px; text-align:center; cursor:pointer;
-    color:var(--sub); font-size:14px; transition:border-color .15s;
+  header{
+    padding:22px 24px 14px; max-width:1100px; margin:0 auto;
   }
-  .upload-zone:hover{ border-color:var(--accent); }
-  .upload-zone input{ display:none; }
-  .upload-zone .icon{ font-size:26px; margin-bottom:8px; display:block; }
+  header h1{ font-size:20px; margin:0 0 4px; letter-spacing:-0.02em; }
+  header p{ margin:0; color:var(--muted); font-size:13.5px; }
 
-  .btn{
-    appearance:none; border:none; border-radius:10px; padding:11px 18px; font-size:14.5px; font-weight:600;
-    cursor:pointer; background:var(--accent); color:#fff; width:100%;
+  .wrap{ max-width:1100px; margin:0 auto; padding:0 24px 60px; }
+
+  .dropzone{
+    margin-top:16px; border:1.5px dashed var(--border); border-radius:var(--radius);
+    background:var(--panel); padding:36px 20px; text-align:center; cursor:pointer;
+    transition:.15s border-color, .15s background;
   }
-  .btn:disabled{ background:#c9c9cc; cursor:not-allowed; }
-  .btn.secondary{ background:#fff; color:var(--text); border:1px solid var(--line); }
-
-  .stage{ position:relative; width:100%; line-height:0; border-radius:10px; overflow:hidden; background:#eee; }
-  .stage canvas{ width:100%; display:block; }
-  .stage .box{
-    position:absolute; border:1.5px solid rgba(25,130,227,0.9); background:rgba(25,130,227,0.12);
-    cursor:pointer; border-radius:2px;
+  .dropzone.drag{ border-color:var(--accent); background:#1a1f2e; }
+  .dropzone strong{ color:var(--text); }
+  .dropzone span{ display:block; color:var(--muted); font-size:12.5px; margin-top:6px; }
+  .dropzone input{ display:none; }
+  .dz-btn{
+    margin-top:14px; display:inline-block; padding:8px 16px; border-radius:8px;
+    background:linear-gradient(135deg,var(--accent),var(--accent2)); font-size:13px; font-weight:600;
   }
-  .stage .box:hover{ background:rgba(25,130,227,0.25); }
-  .stage .box.editing{ background:rgba(255,196,0,0.25); border-color:#e0a300; }
 
-  .status{ font-size:13px; color:var(--sub); margin-top:10px; min-height:18px; }
-  .progress-track{ height:5px; background:#e9e9ec; border-radius:3px; overflow:hidden; margin-top:8px; display:none; }
-  .progress-fill{ height:100%; width:0%; background:var(--accent); transition:width .2s; }
-
-  .edit-panel{
-    display:none; margin-top:12px; padding:12px; border:1px solid var(--line); border-radius:10px; background:#fafafb;
+  .toolbar{
+    display:flex; align-items:center; gap:10px; margin-top:16px; flex-wrap:wrap;
   }
-  .edit-panel.active{ display:block; }
-  .edit-panel label{ font-size:12.5px; color:var(--sub); display:block; margin-bottom:6px; }
-  .edit-panel input[type=text]{
-    width:100%; padding:9px 10px; font-size:15px; border:1px solid #d8d8db; border-radius:8px; margin-bottom:10px;
+  button.btn{
+    background:var(--panel2); color:var(--text); border:1px solid var(--border);
+    padding:9px 14px; border-radius:9px; font-size:13px; cursor:pointer; font-weight:600;
   }
-  .edit-row{ display:flex; gap:8px; }
-  .edit-row .btn{ flex:1; }
+  button.btn:hover{ border-color:var(--accent); }
+  button.btn.primary{ background:linear-gradient(135deg,var(--accent),var(--accent2)); border:none; }
+  button.btn:disabled{ opacity:.4; cursor:not-allowed; }
+  .status{ font-size:12.5px; color:var(--muted); margin-left:auto; }
+  .status b{ color:var(--text); }
 
-  .hint-row{ display:flex; gap:8px; margin-top:10px; }
-  .hint-row .btn{ flex:1; }
+  #progressWrap{ width:100%; height:6px; background:var(--panel2); border-radius:6px; margin-top:12px; overflow:hidden; display:none; }
+  #progressBar{ height:100%; width:0%; background:linear-gradient(90deg,var(--accent),var(--accent2)); transition:width .2s; }
 
-  .footnote{ font-size:12px; color:#a7a7ac; text-align:center; margin-top:14px; line-height:1.5; }
+  #stage-outer{
+    position:relative; margin-top:20px; border-radius:var(--radius); overflow:hidden;
+    border:1px solid var(--border); background:#0b0d12; display:none;
+  }
+  #stage{ position:relative; transform-origin:0 0; }
+  #stage canvas{ display:block; }
+  .word-box{
+    position:absolute; border:1.5px solid rgba(91,140,255,.55); background:rgba(91,140,255,.08);
+    cursor:pointer; border-radius:2px; transition:.1s background,.1s border-color;
+  }
+  .word-box:hover{ background:rgba(91,140,255,.25); border-color:#5b8cff; }
+  .word-box.edited{ border-color:rgba(57,217,138,.7); background:rgba(57,217,138,.10); }
+  .word-box.edited:hover{ background:rgba(57,217,138,.25); }
+
+  .editor-pop{
+    position:absolute; z-index:20; background:var(--panel); border:1px solid var(--border);
+    border-radius:10px; padding:12px; width:260px; box-shadow:0 12px 30px rgba(0,0,0,.5);
+  }
+  .editor-pop label{ font-size:11px; color:var(--muted); display:block; margin:8px 0 4px; }
+  .editor-pop input[type=text]{
+    width:100%; background:#11141a; border:1px solid var(--border); color:var(--text);
+    border-radius:7px; padding:8px 9px; font-size:14px;
+  }
+  .row2{ display:flex; gap:8px; }
+  .row2 > div{ flex:1; }
+  .editor-pop input[type=number]{
+    width:100%; background:#11141a; border:1px solid var(--border); color:var(--text);
+    border-radius:7px; padding:7px 8px; font-size:13px;
+  }
+  .editor-pop input[type=color]{
+    width:100%; height:30px; border:1px solid var(--border); border-radius:7px; background:#11141a; padding:2px;
+  }
+  .chk{ display:flex; align-items:center; gap:6px; margin-top:9px; font-size:12.5px; color:var(--muted); }
+  .pop-actions{ display:flex; gap:8px; margin-top:12px; }
+  .pop-actions button{ flex:1; }
+
+  .empty-hint{ color:var(--muted); font-size:13px; margin-top:10px; }
 </style>
 </head>
 <body>
+
+<header>
+  <h1>🖊️ Screenshot Text Editor</h1>
+  <p>Upload a screenshot, let OCR find the text, then tap any word to edit it in place — font size and color are auto‑matched to the original.</p>
+</header>
+
 <div class="wrap">
-  <h1>Screenshot Text Editor</h1>
-  <p class="sub">Upload a screenshot, scan it for text, then click any detected word to retype it. The background gets patched automatically so the edit blends in.</p>
 
-  <div class="card" id="uploadCard">
-    <label class="upload-zone" id="uploadZone">
-      <span class="icon">&#128247;</span>
-      <span id="uploadLabel">Tap to upload a screenshot</span>
-      <input type="file" id="fileInput" accept="image/*">
-    </label>
+  <div class="dropzone" id="dropzone">
+    <strong>Drop a screenshot here, paste it (Ctrl/Cmd+V), or click to choose a file</strong>
+    <span>PNG, JPG, or WEBP — text is detected automatically after upload</span>
+    <div class="dz-btn">Choose Image</div>
+    <input type="file" id="fileInput" accept="image/*">
   </div>
 
-  <div class="card" id="workCard" style="display:none;">
-    <div class="stage" id="stage">
+  <div id="progressWrap"><div id="progressBar"></div></div>
+
+  <div class="toolbar" id="toolbar" style="display:none;">
+    <button class="btn" id="rescanBtn">🔄 Re-scan text</button>
+    <button class="btn" id="newImageBtn">🖼️ New image</button>
+    <button class="btn primary" id="downloadBtn">⬇️ Download edited image</button>
+    <div class="status" id="statusLine"></div>
+  </div>
+
+  <p class="empty-hint" id="emptyHint">No image loaded yet.</p>
+
+  <div id="stage-outer">
+    <div id="stage">
       <canvas id="canvas"></canvas>
-    </div>
-
-    <div class="progress-track" id="progressTrack"><div class="progress-fill" id="progressFill"></div></div>
-    <div class="status" id="status">Image loaded. Scan for text to begin editing.</div>
-
-    <div class="hint-row">
-      <button class="btn" id="scanBtn">Scan for text</button>
-      <button class="btn secondary" id="downloadBtn" disabled>Download image</button>
-    </div>
-
-    <div class="edit-panel" id="editPanel">
-      <label>Replace detected text</label>
-      <input type="text" id="editInput" placeholder="Type new value">
-      <div class="edit-row">
-        <button class="btn" id="applyBtn">Apply</button>
-        <button class="btn secondary" id="cancelBtn">Cancel</button>
-      </div>
+      <div id="overlay"></div>
     </div>
   </div>
 
-  <p class="footnote">Runs entirely in your browser — nothing is uploaded to a server. Best results on clean UI screenshots with solid-color backgrounds behind the text.</p>
 </div>
 
 <script>
+const dropzone = document.getElementById('dropzone');
 const fileInput = document.getElementById('fileInput');
-const uploadZone = document.getElementById('uploadZone');
-const uploadLabel = document.getElementById('uploadLabel');
-const workCard = document.getElementById('workCard');
-const stage = document.getElementById('stage');
 const canvas = document.getElementById('canvas');
-const ctx = canvas.getContext('2d');
-const statusEl = document.getElementById('status');
-const scanBtn = document.getElementById('scanBtn');
+const ctx = canvas.getContext('2d', { willReadFrequently: true });
+const stageOuter = document.getElementById('stage-outer');
+const stage = document.getElementById('stage');
+const overlay = document.getElementById('overlay');
+const toolbar = document.getElementById('toolbar');
+const statusLine = document.getElementById('statusLine');
+const progressWrap = document.getElementById('progressWrap');
+const progressBar = document.getElementById('progressBar');
+const emptyHint = document.getElementById('emptyHint');
+const rescanBtn = document.getElementById('rescanBtn');
+const newImageBtn = document.getElementById('newImageBtn');
 const downloadBtn = document.getElementById('downloadBtn');
-const progressTrack = document.getElementById('progressTrack');
-const progressFill = document.getElementById('progressFill');
-const editPanel = document.getElementById('editPanel');
-const editInput = document.getElementById('editInput');
-const applyBtn = document.getElementById('applyBtn');
-const cancelBtn = document.getElementById('cancelBtn');
 
-let img = new Image();
-let words = []; // {text, bbox:{x0,y0,x1,y1}, el}
-let activeWord = null;
+let words = []; // {id, bbox:{x0,y0,x1,y1}, text, fontSize, color, bg, weight, edited}
 let naturalW = 0, naturalH = 0;
+let currentPopup = null;
 
-uploadZone.addEventListener('click', (e) => {
-  // let the label's native click-through to input happen
+const FONT_STACK = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
+
+// ---------- Image loading ----------
+dropzone.addEventListener('click', (e) => { if(e.target.tagName !== 'INPUT') fileInput.click(); });
+fileInput.addEventListener('change', () => { if(fileInput.files[0]) loadImage(fileInput.files[0]); });
+
+['dragover','dragenter'].forEach(evt => dropzone.addEventListener(evt, e => {
+  e.preventDefault(); dropzone.classList.add('drag');
+}));
+['dragleave','drop'].forEach(evt => dropzone.addEventListener(evt, e => {
+  e.preventDefault(); dropzone.classList.remove('drag');
+}));
+dropzone.addEventListener('drop', e => {
+  const f = e.dataTransfer.files[0];
+  if (f && f.type.startsWith('image/')) loadImage(f);
 });
-fileInput.addEventListener('change', (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = (ev) => {
-    img = new Image();
-    img.onload = () => {
-      naturalW = img.naturalWidth;
-      naturalH = img.naturalHeight;
-      canvas.width = naturalW;
-      canvas.height = naturalH;
-      ctx.drawImage(img, 0, 0);
-      workCard.style.display = 'block';
-      uploadLabel.textContent = file.name;
-      clearBoxes();
-      words = [];
-      statusEl.textContent = 'Image loaded. Scan for text to begin editing.';
-      downloadBtn.disabled = true;
-    };
-    img.src = ev.target.result;
+document.addEventListener('paste', e => {
+  const items = e.clipboardData?.items || [];
+  for (const item of items) {
+    if (item.type.startsWith('image/')) { loadImage(item.getAsFile()); break; }
+  }
+});
+
+function loadImage(file) {
+  const img = new Image();
+  const url = URL.createObjectURL(file);
+  img.onload = () => {
+    naturalW = img.naturalWidth; naturalH = img.naturalHeight;
+    canvas.width = naturalW; canvas.height = naturalH;
+    ctx.clearRect(0,0,naturalW,naturalH);
+    ctx.drawImage(img, 0, 0);
+    URL.revokeObjectURL(url);
+    words = [];
+    overlay.innerHTML = '';
+    closePopup();
+    stageOuter.style.display = 'block';
+    toolbar.style.display = 'flex';
+    emptyHint.style.display = 'none';
+    fitStage();
+    runOCR();
   };
-  reader.readAsDataURL(file);
-});
-
-function clearBoxes(){
-  stage.querySelectorAll('.box').forEach(b => b.remove());
+  img.src = url;
 }
 
-function renderBoxes(){
-  clearBoxes();
-  const scaleX = stage.clientWidth / naturalW;
-  const rectH = stage.clientWidth / naturalW;
-  words.forEach((w, idx) => {
-    const el = document.createElement('div');
-    el.className = 'box';
-    const x = w.bbox.x0 * scaleX;
-    const y = w.bbox.y0 * scaleX;
-    const width = (w.bbox.x1 - w.bbox.x0) * scaleX;
-    const height = (w.bbox.y1 - w.bbox.y0) * scaleX;
-    el.style.left = x + 'px';
-    el.style.top = y + 'px';
-    el.style.width = width + 'px';
-    el.style.height = height + 'px';
-    el.title = w.text;
-    el.addEventListener('click', () => startEdit(idx));
-    stage.appendChild(el);
-    w.el = el;
-  });
+function fitStage() {
+  const maxW = Math.min(1052, stageOuter.parentElement.clientWidth || 1052);
+  const scale = Math.min(1, maxW / naturalW);
+  stage.style.width = naturalW + 'px';
+  stage.style.height = naturalH + 'px';
+  stage.style.transform = `scale(${scale})`;
+  stageOuter.style.width = (naturalW * scale) + 'px';
+  stageOuter.style.height = (naturalH * scale) + 'px';
 }
+window.addEventListener('resize', () => { if (naturalW) fitStage(); });
 
-scanBtn.addEventListener('click', async () => {
-  scanBtn.disabled = true;
-  progressTrack.style.display = 'block';
-  statusEl.textContent = 'Scanning for text…';
-  progressFill.style.width = '5%';
+// ---------- OCR ----------
+async function runOCR() {
+  closePopup();
+  overlay.innerHTML = '';
+  words = [];
+  progressWrap.style.display = 'block';
+  progressBar.style.width = '0%';
+  statusLine.innerHTML = '<b>Scanning…</b>';
+  rescanBtn.disabled = true; downloadBtn.disabled = true;
+
   try {
     const result = await Tesseract.recognize(canvas, 'eng', {
-      logger: (m) => {
+      logger: m => {
         if (m.status === 'recognizing text') {
-          progressFill.style.width = Math.round(m.progress * 100) + '%';
+          progressBar.style.width = Math.round(m.progress * 100) + '%';
         }
       }
     });
-    words = result.data.words
-      .filter(w => w.text && w.text.trim().length > 0 && w.confidence > 35)
-      .map(w => ({ text: w.text, bbox: w.bbox }));
-    renderBoxes();
-    statusEl.textContent = words.length
-      ? `Found ${words.length} text region${words.length===1?'':'s'}. Tap one to edit it.`
-      : 'No text detected — try a clearer screenshot.';
+    const rawWords = result.data.words || [];
+    let idc = 0;
+    words = rawWords
+      .filter(w => w.text && w.text.trim().length && w.confidence > 25)
+      .map(w => ({
+        id: 'w' + (idc++),
+        bbox: { x0: w.bbox.x0, y0: w.bbox.y0, x1: w.bbox.x1, y1: w.bbox.y1 },
+        text: w.text,
+        edited: false
+      }));
+    renderOverlays();
+    statusLine.innerHTML = `<b>${words.length}</b> text regions found — tap any to edit`;
   } catch (err) {
-    statusEl.textContent = 'Scan failed: ' + err.message;
+    console.error(err);
+    statusLine.textContent = 'OCR failed — try a clearer image.';
   } finally {
-    scanBtn.disabled = false;
-    progressTrack.style.display = 'none';
+    progressWrap.style.display = 'none';
+    rescanBtn.disabled = false; downloadBtn.disabled = false;
   }
+}
+
+rescanBtn.addEventListener('click', runOCR);
+newImageBtn.addEventListener('click', () => {
+  stageOuter.style.display = 'none';
+  toolbar.style.display = 'none';
+  emptyHint.style.display = 'block';
+  emptyHint.textContent = 'No image loaded yet.';
+  fileInput.value = '';
+  words = []; overlay.innerHTML = '';
+  closePopup();
 });
-
-function sampleEdgeColor(bbox){
-  // sample a ring of pixels just outside the box to estimate background color
-  const pad = 3;
-  const x0 = Math.max(0, Math.floor(bbox.x0) - pad);
-  const y0 = Math.max(0, Math.floor(bbox.y0) - pad);
-  const x1 = Math.min(canvas.width, Math.ceil(bbox.x1) + pad);
-  const y1 = Math.min(canvas.height, Math.ceil(bbox.y1) + pad);
-  const w = x1 - x0, h = y1 - y0;
-  if (w <= 0 || h <= 0) return 'rgb(255,255,255)';
-  const data = ctx.getImageData(x0, y0, w, h).data;
-  // collect border ring pixels only
-  let r=0,g=0,b=0,n=0;
-  for (let yy=0; yy<h; yy++){
-    for (let xx=0; xx<w; xx++){
-      const isBorder = xx < pad || yy < pad || xx >= w-pad || yy >= h-pad;
-      if (!isBorder) continue;
-      const i = (yy*w+xx)*4;
-      r += data[i]; g += data[i+1]; b += data[i+2]; n++;
-    }
-  }
-  if (n === 0) return 'rgb(255,255,255)';
-  return `rgb(${Math.round(r/n)},${Math.round(g/n)},${Math.round(b/n)})`;
-}
-
-function startEdit(idx){
-  activeWord = idx;
-  stage.querySelectorAll('.box').forEach(b => b.classList.remove('editing'));
-  words[idx].el.classList.add('editing');
-  editInput.value = words[idx].text;
-  editPanel.classList.add('active');
-  editInput.focus();
-  editInput.select();
-}
-
-applyBtn.addEventListener('click', applyEdit);
-editInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') applyEdit(); });
-
-function applyEdit(){
-  if (activeWord === null) return;
-  const w = words[activeWord];
-  const newText = editInput.value;
-  const bg = sampleEdgeColor(w.bbox);
-
-  const bx = w.bbox.x0, by = w.bbox.y0;
-  const bw = w.bbox.x1 - w.bbox.x0, bh = w.bbox.y1 - w.bbox.y0;
-
-  // patch background
-  ctx.fillStyle = bg;
-  ctx.fillRect(bx - 1, by - 1, bw + 2, bh + 2);
-
-  // draw replacement text, sized to fill the box height
-  const fontSize = Math.max(10, Math.floor(bh * 0.92));
-  ctx.fillStyle = '#111214';
-  ctx.font = `600 ${fontSize}px -apple-system, Helvetica, Arial, sans-serif`;
-  ctx.textBaseline = 'middle';
-  ctx.textAlign = 'left';
-  ctx.fillText(newText, bx, by + bh/2 + fontSize*0.04);
-
-  w.text = newText;
-  editPanel.classList.remove('active');
-  words[activeWord].el.classList.remove('editing');
-  activeWord = null;
-  downloadBtn.disabled = false;
-  statusEl.textContent = 'Updated. Tap another region, or download the image.';
-}
-
-cancelBtn.addEventListener('click', () => {
-  if (activeWord !== null) words[activeWord].el.classList.remove('editing');
-  activeWord = null;
-  editPanel.classList.remove('active');
-});
-
 downloadBtn.addEventListener('click', () => {
   const link = document.createElement('a');
   link.download = 'edited-screenshot.png';
   link.href = canvas.toDataURL('image/png');
   link.click();
 });
+
+// ---------- Overlays ----------
+function renderOverlays() {
+  overlay.innerHTML = '';
+  words.forEach(w => {
+    const div = document.createElement('div');
+    div.className = 'word-box' + (w.edited ? ' edited' : '');
+    const { x0, y0, x1, y1 } = w.bbox;
+    div.style.left = x0 + 'px';
+    div.style.top = y0 + 'px';
+    div.style.width = (x1 - x0) + 'px';
+    div.style.height = (y1 - y0) + 'px';
+    div.title = w.text;
+    div.addEventListener('click', (e) => { e.stopPropagation(); openEditor(w, div); });
+    overlay.appendChild(div);
+  });
+}
+
+// ---------- Color sampling ----------
+function sampleColors(x0, y0, x1, y1) {
+  x0 = Math.max(0, Math.floor(x0)); y0 = Math.max(0, Math.floor(y0));
+  x1 = Math.min(canvas.width, Math.ceil(x1)); y1 = Math.min(canvas.height, Math.ceil(y1));
+  const w = x1 - x0, h = y1 - y0;
+  if (w <= 0 || h <= 0) return { bg: '#ffffff', fg: '#000000' };
+  const data = ctx.getImageData(x0, y0, w, h).data;
+  const counts = new Map();
+  for (let i = 0; i < data.length; i += 4) {
+    if (data[i+3] < 200) continue;
+    const key = `${data[i]>>3},${data[i+1]>>3},${data[i+2]>>3}`;
+    counts.set(key, (counts.get(key) || 0) + 1);
+  }
+  const sorted = [...counts.entries()].sort((a,b) => b[1]-a[1]);
+  if (!sorted.length) return { bg: '#ffffff', fg: '#000000' };
+  const toRGB = k => k.split(',').map(v => parseInt(v)*8 + 4);
+  const bgRGB = toRGB(sorted[0][0]);
+  let fgRGB = [0,0,0];
+  for (const [key] of sorted) {
+    const rgb = toRGB(key);
+    const dist = Math.abs(rgb[0]-bgRGB[0]) + Math.abs(rgb[1]-bgRGB[1]) + Math.abs(rgb[2]-bgRGB[2]);
+    if (dist > 150) { fgRGB = rgb; break; }
+  }
+  const toHex = arr => '#' + arr.map(v => Math.max(0,Math.min(255,v)).toString(16).padStart(2,'0')).join('');
+  return { bg: toHex(bgRGB), fg: toHex(fgRGB) };
+}
+
+function fitFontSize(text, maxWidth, baseSize, weight) {
+  let size = baseSize;
+  while (size > 6) {
+    ctx.font = `${weight} ${size}px ${FONT_STACK}`;
+    if (ctx.measureText(text).width <= maxWidth) break;
+    size--;
+  }
+  return size;
+}
+
+// ---------- Editor popup ----------
+function closePopup() {
+  if (currentPopup) { currentPopup.remove(); currentPopup = null; }
+}
+
+function openEditor(word, boxEl) {
+  closePopup();
+  const { x0, y0, x1, y1 } = word.bbox;
+  const { bg, fg } = sampleColors(x0, y0, x1, y1);
+  const fontSize = word.fontSize || Math.max(8, Math.round((y1 - y0) * 0.82));
+  const color = word.color || fg;
+  const bgColor = word.bg || bg;
+  const weight = word.weight || 'normal';
+
+  const pop = document.createElement('div');
+  pop.className = 'editor-pop';
+  pop.innerHTML = `
+    <label>Text</label>
+    <input type="text" id="fText" value="${escapeHtml(word.text)}">
+    <div class="row2">
+      <div><label>Font size</label><input type="number" id="fSize" value="${fontSize}" min="6" max="300"></div>
+      <div><label>Text color</label><input type="color" id="fColor" value="${toColorInput(color)}"></div>
+    </div>
+    <label>Background color</label>
+    <input type="color" id="fBg" value="${toColorInput(bgColor)}">
+    <div class="chk"><input type="checkbox" id="fBold" ${weight==='bold'?'checked':''}><label for="fBold" style="margin:0;">Bold</label></div>
+    <div class="pop-actions">
+      <button class="btn" id="fCancel">Cancel</button>
+      <button class="btn primary" id="fApply">Apply</button>
+    </div>
+  `;
+
+  // position: just below the box, clamp inside stage
+  let left = x0, top = y1 + 8;
+  if (top + 230 > naturalH) top = Math.max(0, y0 - 238);
+  if (left + 260 > naturalW) left = Math.max(0, naturalW - 260);
+  pop.style.left = left + 'px';
+  pop.style.top = top + 'px';
+  stage.appendChild(pop);
+  currentPopup = pop;
+
+  const fTextEl = pop.querySelector('#fText');
+  fTextEl.focus();
+  fTextEl.select();
+
+  pop.querySelector('#fCancel').addEventListener('click', closePopup);
+  pop.querySelector('#fApply').addEventListener('click', () => {
+    const newText = fTextEl.value;
+    const newSize = parseInt(pop.querySelector('#fSize').value, 10) || fontSize;
+    const newColor = pop.querySelector('#fColor').value;
+    const newBg = pop.querySelector('#fBg').value;
+    const newWeight = pop.querySelector('#fBold').checked ? 'bold' : 'normal';
+    applyEdit(word, { text: newText, fontSize: newSize, color: newColor, bg: newBg, weight: newWeight });
+    renderOverlays();
+    closePopup();
+  });
+
+  fTextEl.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { pop.querySelector('#fApply').click(); }
+    if (e.key === 'Escape') { closePopup(); }
+  });
+}
+
+document.addEventListener('click', (e) => {
+  if (currentPopup && !currentPopup.contains(e.target)) closePopup();
+});
+
+function applyEdit(word, opts) {
+  const { x0, y0, x1, y1 } = word.bbox;
+  const pad = Math.max(2, Math.round((y1 - y0) * 0.12));
+  // cover original text with sampled/chosen background
+  ctx.fillStyle = opts.bg;
+  ctx.fillRect(x0 - pad, y0 - pad, (x1 - x0) + pad*2, (y1 - y0) + pad*2);
+  // fit and draw new text
+  const maxWidth = (x1 - x0) + pad * 2;
+  const fitted = fitFontSize(opts.text, maxWidth, opts.fontSize, opts.weight);
+  ctx.font = `${opts.weight} ${fitted}px ${FONT_STACK}`;
+  ctx.fillStyle = opts.color;
+  ctx.textBaseline = 'alphabetic';
+  ctx.fillText(opts.text, x0, y1 - (y1 - y0) * 0.15);
+
+  word.text = opts.text;
+  word.fontSize = fitted;
+  word.color = opts.color;
+  word.bg = opts.bg;
+  word.weight = opts.weight;
+  word.edited = true;
+}
+
+function escapeHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function toColorInput(c) {
+  if (/^#[0-9a-f]{6}$/i.test(c)) return c;
+  return '#000000';
+}
 </script>
 </body>
-  </html>
-
+</html>
