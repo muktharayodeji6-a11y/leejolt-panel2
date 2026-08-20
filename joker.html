@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Form W-8BEN — Fillable</title>
+<style>
+  /* Page is built at exact Letter size (612pt x 792pt) with margins baked
+     into the .page padding — NOT relying on @page margins, since mobile
+     browsers apply those inconsistently. This keeps print output pixel-true
+     to the PDF regardless of device. */
+  @page { size: 612pt 792pt; margin: 0; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: Helvetica, Arial, sans-serif;
+    background: #ddd;
+  }
+  .page {
+    width: 612pt;
+    min-height: 792pt;
+    margin: 16pt auto;
+    background: #fff;
+    padding: 30pt 32pt;
+    box-shadow: 0 0 8pt rgba(0,0,0,0.25);
+  }
+
+  table { width: 100%; border-collapse: collapse; }
+  td { border: 0.9pt solid #000; padding: 2.2pt 4pt; vertical-align: top; }
+
+  /* ---- Header ---- */
+  .header-table td { border: none; padding: 0; }
+  .form-box { border: 1.3pt solid #000; padding: 3pt 3pt; text-align: center; width: 82pt; }
+  .form-box .lbl-form { font-size: 7.5pt; }
+  .formno { font-size: 15pt; font-weight: bold; letter-spacing: -0.6pt; line-height: 1; margin: 2pt 0; white-space: nowrap; }
+  .rev { font-size: 6.3pt; }
+  .dept { font-size: 6.6pt; line-height: 1.25; margin-top: 4pt; }
+  .title-x { padding-left: 10pt; }
+  .title-x h1 { font-size: 10.4pt; margin: 0 0 2pt 0; font-weight: bold; line-height: 1.1; }
+  .bullets { font-size: 7.2pt; line-height: 1.3; }
+  .omb { font-size: 8pt; text-align: right; white-space: nowrap; padding-top: 2pt; }
+
+  .donot { border: 1.2pt solid #000; margin-top: 3pt; padding: 2pt 6pt; }
+  .donot .hdr { font-weight: bold; font-size: 8.2pt; margin-bottom: 1pt; display:flex; justify-content: space-between; }
+  .donot ul { margin: 0; padding-left: 13pt; line-height: 1.32; }
+  .donot li { display: flex; justify-content: space-between; gap: 10pt; font-size: 6.9pt; }
+  .donot li span.instead { white-space: nowrap; font-weight: bold; }
+
+  .note { border: 1.2pt solid #000; border-top: none; padding: 2pt 6pt; font-size: 6.9pt; line-height: 1.3; }
+
+  .part-hdr {
+    background: #000; color: #fff; font-weight: bold; font-size: 9pt;
+    padding: 3pt 6pt; margin-top: 3pt; line-height: 1;
+  }
+  .part-hdr .desc { font-weight: normal; font-size: 7.9pt; }
+
+  .field-table td { padding: 1.6pt 5pt 2pt 5pt; }
+  .num { font-weight: bold; width: 15pt; font-size: 7.4pt; white-space: nowrap; }
+  .lbl { font-size: 6.9pt; margin-bottom: 1pt; display: block; }
+
+  input[type=text] {
+    border: none; border-bottom: 0.8pt solid #7aa7d9; width: 100%;
+    font-family: Helvetica, Arial, sans-serif; font-size: 8.4pt;
+    padding: 1pt 2pt 1pt 2pt; background: #eef4fc; height: 12pt;
+  }
+  input[type=text]:focus { outline: 1px solid #2a6ebb; background: #e3edfa; }
+  textarea {
+    width: 100%; border: none; resize: vertical; min-height: 16pt;
+    font-family: Helvetica, Arial, sans-serif; font-size: 7.6pt;
+    background: #eef4fc; padding: 2pt;
+  }
+  textarea:focus { outline: 1px solid #2a6ebb; background: #e3edfa; }
+
+  .checkbox-row { display: flex; align-items: center; gap: 4pt; }
+  input[type=checkbox] { width: 9pt; height: 9pt; }
+
+  .p10-line { font-size: 6.9pt; line-height: 1.55; }
+  .p10-line input[type=text] { display: inline-block; width: 60pt; vertical-align: middle; height: 10pt; }
+  .p10-line input.wide { width: 180pt; }
+  .p10-line input.rate { width: 36pt; }
+
+  .explain-lbl { font-size: 6.9pt; margin: 2pt 0 1pt 0; }
+
+  .cert-text { font-size: 6.5pt; line-height: 1.32; padding: 4pt 6pt; border: 0.9pt solid #000; border-top: none; }
+  .cert-text p { margin: 2pt 0; }
+  .cert-text ul { margin: 1pt 0; padding-left: 13pt; }
+  .cert-text li { margin-bottom: 0.5pt; }
+  .cert-text .sub { margin-left: 11pt; }
+
+  .signhere-row {
+    border: 0.9pt solid #000; border-top: none; padding: 3pt 6pt;
+    display: flex; align-items: center; gap: 6pt; font-size: 6.5pt;
+  }
+  .signhere-row b { font-size: 8.6pt; white-space: nowrap; }
+
+  .sig-table { border-collapse: collapse; }
+  .sig-table td { border: 0.9pt solid #000; border-top: none; padding: 2pt 5pt 1pt 5pt; vertical-align: bottom; }
+  .sig-cell .caption { font-size: 6.1pt; margin-top: 1pt; }
+
+  .sig-pad-wrap { position: relative; }
+  #f_sig_canvas {
+    display: block; width: 100%; height: 30pt;
+    border-bottom: 0.8pt solid #7aa7d9; background: #eef4fc;
+    touch-action: none; cursor: crosshair;
+  }
+  .sig-clear-btn {
+    position: absolute; top: 1pt; right: 1pt;
+    font-size: 6pt; background: #fff; border: 0.7pt solid #7aa7d9; color: #2a6ebb;
+    border-radius: 3pt; padding: 1pt 4pt; cursor: pointer; line-height: 1.4;
+  }
+  @media print {
+    #f_sig_canvas { background: transparent !important; border-bottom-color: #000; }
+    .sig-clear-btn { display: none; }
+  }
+
+  .pn-cell { border: 0.9pt solid #000; border-top: none; padding: 2pt 5pt 1pt 5pt; }
+  .pn-cell .caption { font-size: 6.1pt; margin-top: 1pt; }
+
+  .footer-table { margin-top: 4pt; }
+  .footer-table td { border: none; font-size: 6.6pt; padding: 0; }
+  .footer-table .mid { text-align: center; }
+  .footer-table .right { text-align: right; font-weight: bold; font-size: 7pt; }
+
+  @media print {
+    body { background: #fff; }
+    .page { box-shadow: none; margin: 0 auto; }
+    input[type=text], textarea { background: transparent !important; outline: none !important; }
+    .no-print { display: none; }
+  }
+
+  .toolbar { position: sticky; top: 0; z-index: 10; display: flex; gap: 8px; justify-content: flex-end; padding: 10px 10px 0 0; }
+  .btn { background: #2a6ebb; color: #fff; border: none; padding: 8px 14px; border-radius: 5px; font-size: 13px; cursor: pointer; }
+  .btn.secondary { background: #666; }
+</style>
+</head>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<body>
+
+<div class="toolbar no-print">
+  <button class="btn secondary" onclick="clearForm()">Clear</button>
+  <button class="btn secondary" onclick="saveAsImage()">🖼️ Save as Image</button>
+  <button class="btn" onclick="window.print()">🖨️ Print / Save as PDF</button>
+</div>
+
+<div class="page">
+
+<table class="header-table">
+  <tr>
+    <td style="width:84pt; vertical-align:top;">
+      <div class="form-box">
+        <div class="lbl-form">Form</div>
+        <div class="formno">W-8BEN</div>
+        <div class="rev">(Rev. October 2021)</div>
+      </div>
+      <div class="dept">Department of the Treasury<br>Internal Revenue Service</div>
+    </td>
+    <td style="vertical-align:top;"><div class="title-x">
+      <h1>Certificate of Foreign Status of Beneficial Owner for United<br>States Tax Withholding and Reporting (Individuals)</h1>
+      <div class="bullets">
+        <div>&#9632; For use by individuals. Entities must use Form W-8BEN-E.</div>
+        <div>&#9632; Go to <b>www.irs.gov/FormW8BEN</b> for instructions and the latest information.</div>
+        <div>&#9632; Give this form to the withholding agent or payer. Do not send to the IRS.</div>
+      </div>
+    </div></td>
+    <td style="width:100pt; vertical-align:top;"><div class="omb">OMB No. 1545-1621</div></td>
+  </tr>
+</table>
+
+<div class="donot">
+  <div class="hdr"><span>Do NOT use this form if:</span><span>Instead, use Form:</span></div>
+  <ul>
+    <li><span>You are NOT an individual</span><span class="instead">W-8BEN-E</span></li>
+    <li><span>You are a U.S. citizen or other U.S. person, including a resident alien individual</span><span class="instead">W-9</span></li>
+    <li><span>You are a beneficial owner claiming that income is effectively connected with the conduct of trade or business within the United States (other than personal services)</span><span class="instead">W-8ECI</span></li>
+    <li><span>You are a beneficial owner who is receiving compensation for personal services performed in the United States</span><span class="instead">8233 or W-4</span></li>
+    <li><span>You are a person acting as an intermediary</span><span class="instead">W-8IMY</span></li>
+  </ul>
+</div>
+<div class="note"><b>Note:</b> If you are resident in a FATCA partner jurisdiction (that is, a Model 1 IGA jurisdiction with reciprocity), certain tax account information may be provided to your jurisdiction of residence.</div>
+
+<div class="part-hdr">Part I &nbsp; <span class="desc">Identification of Beneficial Owner (see instructions)</span></div>
+<table class="field-table">
+  <tr>
+    <td class="num">1</td>
+    <td style="width:65%;"><span class="lbl">Name of individual who is the beneficial owner</span><input type="text" id="f_name"></td>
+    <td class="num">2</td>
+    <td><span class="lbl">Country of citizenship</span><input type="text" id="f_citizenship"></td>
+  </tr>
+  <tr>
+    <td class="num">3</td>
+    <td colspan="3"><span class="lbl">Permanent residence address (street, apt. or suite no., or rural route). <b>Do not use a P.O. box or in-care-of address.</b></span><input type="text" id="f_addr1"></td>
+  </tr>
+  <tr>
+    <td></td>
+    <td><span class="lbl">City or town, state or province. Include postal code where appropriate.</span><input type="text" id="f_city1"></td>
+    <td></td>
+    <td><span class="lbl">Country</span><input type="text" id="f_country1"></td>
+  </tr>
+  <tr>
+    <td class="num">4</td>
+    <td colspan="3"><span class="lbl">Mailing address (if different from above)</span><input type="text" id="f_addr2"></td>
+  </tr>
+  <tr>
+    <td></td>
+    <td><span class="lbl">City or town, state or province. Include postal code where appropriate.</span><input type="text" id="f_city2"></td>
+    <td></td>
+    <td><span class="lbl">Country</span><input type="text" id="f_country2"></td>
+  </tr>
+  <tr>
+    <td class="num">5</td>
+    <td colspan="3"><span class="lbl">U.S. taxpayer identification number (SSN or ITIN), if required (see instructions)</span><input type="text" id="f_tin"></td>
+  </tr>
+  <tr>
+    <td class="num">6a</td>
+    <td><span class="lbl">Foreign tax identifying number (see instructions)</span><input type="text" id="f_ftin"></td>
+    <td class="num">6b</td>
+    <td><div class="checkbox-row"><input type="checkbox" id="f_ftin_na"><label class="lbl" style="margin:0;" for="f_ftin_na">Check if FTIN not legally required . . . . . . . .</label></div></td>
+  </tr>
+  <tr>
+    <td class="num">7</td>
+    <td><span class="lbl">Reference number(s) (see instructions)</span><input type="text" id="f_ref"></td>
+    <td class="num">8</td>
+    <td><span class="lbl">Date of birth (MM-DD-YYYY) (see instructions)</span><input type="text" id="f_dob" placeholder="MM-DD-YYYY"></td>
+  </tr>
+</table>
+
+<div class="part-hdr">Part II &nbsp; <span class="desc">Claim of Tax Treaty Benefits (for chapter 3 purposes only) (see instructions)</span></div>
+<table class="field-table">
+  <tr>
+    <td class="num">9</td>
+    <td><div class="p10-line">I certify that the beneficial owner is a resident of <input type="text" class="wide" id="f_treatycountry"> within the meaning of the income tax treaty between the United States and that country.</div></td>
+  </tr>
+  <tr>
+    <td class="num">10</td>
+    <td>
+      <div class="p10-line">Special rates and conditions (if applicable—see instructions): The beneficial owner is claiming the provisions of Article and paragraph
+      <input type="text" id="f_article"> of the treaty identified on line 9 above to claim a
+      <input type="text" class="rate" id="f_rate"> % rate of withholding on (specify type of income):
+      <input type="text" class="wide" id="f_incometype">.</div>
+      <div class="explain-lbl">Explain the additional conditions in the Article and paragraph the beneficial owner meets to be eligible for the rate of withholding:</div>
+      <textarea id="f_explain" rows="2"></textarea>
+    </td>
+  </tr>
+</table>
+
+<div class="part-hdr">Part III &nbsp; <span class="desc">Certification</span></div>
+<div class="cert-text">
+  <p>Under penalties of perjury, I declare that I have examined the information on this form and to the best of my knowledge and belief it is true, correct, and complete. I further certify under penalties of perjury that:</p>
+  <ul>
+    <li>I am the individual that is the beneficial owner (or am authorized to sign for the individual that is the beneficial owner) of all the income or proceeds to which this form relates or am using this form to document myself for chapter 4 purposes;</li>
+    <li>The person named on line 1 of this form is not a U.S. person;</li>
+    <li>This form relates to:
+      <div class="sub">
+        (a) income not effectively connected with the conduct of a trade or business in the United States;<br>
+        (b) income effectively connected with the conduct of a trade or business in the United States but is not subject to tax under an applicable income tax treaty;<br>
+        (c) the partner's share of a partnership's effectively connected taxable income; or<br>
+        (d) the partner's amount realized from the transfer of a partnership interest subject to withholding under section 1446(f);
+      </div>
+    </li>
+    <li>The person named on line 1 of this form is a resident of the treaty country listed on line 9 of the form (if any) within the meaning of the income tax treaty between the United States and that country; and</li>
+    <li>For broker transactions or barter exchanges, the beneficial owner is an exempt foreign person as defined in the instructions.</li>
+  </ul>
+  <p>Furthermore, I authorize this form to be provided to any withholding agent that has control, receipt, or custody of the income of which I am the beneficial owner or any withholding agent that can disburse or make payments of the income of which I am the beneficial owner. I agree that I will submit a new form within 30 days if any certification made on this form becomes incorrect.</p>
+</div>
+
+<div class="signhere-row">
+  <b>Sign Here &#9654;</b>
+  <input type="checkbox" id="f_capacity">
+  <label for="f_capacity">I certify that I have the capacity to sign for the person identified on line 1 of this form.</label>
+</div>
+
+<table class="sig-table">
+  <tr>
+    <td class="sig-cell" style="width:68%;">
+      <div class="sig-pad-wrap">
+        <canvas id="f_sig_canvas"></canvas>
+      </div>
+      <div class="caption">Signature of beneficial owner (or individual authorized to sign for beneficial owner)</div>
+    </td>
+    <td class="sig-cell" style="width:32%;"><input type="text" id="f_sigdate" placeholder="MM-DD-YYYY"><div class="caption">Date (MM-DD-YYYY)</div></td>
+  </tr>
+</table>
+<div class="pn-cell"><input type="text" id="f_printname"><div class="caption">Print name of signer</div></div>
+
+<table class="footer-table">
+  <tr>
+    <td style="width:45%;">For Paperwork Reduction Act Notice, see separate instructions.</td>
+    <td class="mid">Cat. No. 25047Z</td>
+    <td class="right">Form W-8BEN (Rev. 10-2021)</td>
+  </tr>
+</table>
+
+</div>
+
+<script>
+  function clearForm() {
+    document.querySelectorAll('input[type=text], textarea').forEach(el => el.value = '');
+    document.querySelectorAll('input[type=checkbox]').forEach(el => el.checked = false);
+    clearSignature();
+  }
+
+  // ---- Signature pad ----
+  const sigCanvas = document.getElementById('f_sig_canvas');
+  const sigCtx = sigCanvas.getContext('2d');
+  let sigDrawing = false;
+  let sigHasInk = false;
+  let sigLastX = 0, sigLastY = 0;
+
+  function sizeSigCanvas() {
+    // Preserve existing ink across resizes by snapshotting first.
+    const snapshot = sigHasInk ? sigCanvas.toDataURL() : null;
+    const rect = sigCanvas.getBoundingClientRect();
+    const ratio = window.devicePixelRatio || 1;
+    sigCanvas.width = Math.max(1, Math.round(rect.width * ratio));
+    sigCanvas.height = Math.max(1, Math.round(rect.height * ratio));
+    sigCtx.setTransform(ratio, 0, 0, ratio, 0, 0);
+    sigCtx.lineWidth = 1.6;
+    sigCtx.lineCap = 'round';
+    sigCtx.lineJoin = 'round';
+    sigCtx.strokeStyle = '#1a1a6e';
+    if (snapshot) {
+      const img = new Image();
+      img.onload = () => sigCtx.drawImage(img, 0, 0, rect.width, rect.height);
+      img.src = snapshot;
+    }
+  }
+
+  function sigPointFromEvent(evt) {
+    const rect = sigCanvas.getBoundingClientRect();
+    const point = evt.touches ? evt.touches[0] : evt;
+    return { x: point.clientX - rect.left, y: point.clientY - rect.top };
+  }
+
+  function sigStart(evt) {
+    evt.preventDefault();
+    sigDrawing = true;
+    const p = sigPointFromEvent(evt);
+    sigLastX = p.x; sigLastY = p.y;
+  }
+
+  function sigMove(evt) {
+    if (!sigDrawing) return;
+    evt.preventDefault();
+    const p = sigPointFromEvent(evt);
+    sigCtx.beginPath();
+    sigCtx.moveTo(sigLastX, sigLastY);
+    sigCtx.lineTo(p.x, p.y);
+    sigCtx.stroke();
+    sigLastX = p.x; sigLastY = p.y;
+    sigHasInk = true;
+  }
+
+  function sigEnd() { sigDrawing = false; }
+
+  function clearSignature() {
+    sigCtx.clearRect(0, 0, sigCanvas.width, sigCanvas.height);
+    sigHasInk = false;
+  }
+
+  sigCanvas.addEventListener('mousedown', sigStart);
+  sigCanvas.addEventListener('mousemove', sigMove);
+  window.addEventListener('mouseup', sigEnd);
+  sigCanvas.addEventListener('touchstart', sigStart, { passive: false });
+  sigCanvas.addEventListener('touchmove', sigMove, { passive: false });
+  sigCanvas.addEventListener('touchend', sigEnd);
+
+  window.addEventListener('resize', sizeSigCanvas);
+  window.addEventListener('load', sizeSigCanvas);
+  sizeSigCanvas();
+
+  function saveAsImage() {
+    const pageEl = document.querySelector('.page');
+    html2canvas(pageEl, {
+      scale: 3,
+      backgroundColor: '#ffffff',
+      useCORS: true,
+      onclone: (clonedDoc) => {
+        // html2canvas clones the DOM before rendering; a cloned <canvas>
+        // starts blank, so copy the live signature bitmap into it here.
+        const clonedSig = clonedDoc.getElementById('f_sig_canvas');
+        if (clonedSig) {
+          clonedSig.width = sigCanvas.width;
+          clonedSig.height = sigCanvas.height;
+          clonedSig.getContext('2d').drawImage(sigCanvas, 0, 0);
+        }
+      }
+    }).then(canvas => {
+      const link = document.createElement('a');
+      link.download = 'W-8BEN.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    });
+  }
+</script>
+
+</body>
+  </html>
+
