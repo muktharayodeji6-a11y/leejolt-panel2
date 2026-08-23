@@ -53,7 +53,7 @@ const BATCH_MIN = 20;
 // already override to a 50-unit floor for Views on the frontend). Used
 // when a batch gets randomly routed to TheKclaut in dual-provider mode.
 // Can be overridden per-order via `serviceMinThekclaut` in the request.
-const THEKCLAUT_DEFAULT_MIN = 50;
+const THEKCLAUT_DEFAULT_MIN = 100;
 const BATCH_PROCESS_LIMIT = 2;
 
 // Betalogs Instagram Views gets its own fast drip pattern instead of the
@@ -68,9 +68,9 @@ const IG_VIEWS_GAP_MAX_MINUTES = 35;
 
 // TheKclaut Instagram Views: own fast drip pattern with same config
 const IG_VIEWS_THEKCLAUT_SERVICE_ID = "11953";
-const IG_VIEWS_THEKCLAUT_BATCH_MIN = 50;
-const IG_VIEWS_THEKCLAUT_BATCH_MAX = 60;
-const IG_VIEWS_THEKCLAUT_GAP_MIN_MINUTES = 15;
+const IG_VIEWS_THEKCLAUT_BATCH_MIN = 100;
+const IG_VIEWS_THEKCLAUT_BATCH_MAX = 120;
+const IG_VIEWS_THEKCLAUT_GAP_MIN_MINUTES = 20;
 const IG_VIEWS_THEKCLAUT_GAP_MAX_MINUTES = 35;
 
 // ---- Rotating fixed drip-feed schedules (WAT / UTC+1 wall-clock times) ----
