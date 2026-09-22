@@ -68,10 +68,10 @@ const IG_VIEWS_GAP_MAX_MINUTES = 35;
 
 // TheKclaut Instagram Views: own fast drip pattern with same config
 const IG_VIEWS_THEKCLAUT_SERVICE_ID = "11827";
-const IG_VIEWS_THEKCLAUT_BATCH_MIN = 300;
-const IG_VIEWS_THEKCLAUT_BATCH_MAX = 900;
-const IG_VIEWS_THEKCLAUT_GAP_MIN_MINUTES = 15;
-const IG_VIEWS_THEKCLAUT_GAP_MAX_MINUTES = 25;
+const IG_VIEWS_THEKCLAUT_BATCH_MIN = 438;
+const IG_VIEWS_THEKCLAUT_BATCH_MAX = 1087;
+const IG_VIEWS_THEKCLAUT_GAP_MIN_MINUTES = 21;
+const IG_VIEWS_THEKCLAUT_GAP_MAX_MINUTES = 30;
 
 // ---- Rotating fixed drip-feed schedules (WAT / UTC+1 wall-clock times) ----
 // Instead of generating random delays per order, each order is locked to
