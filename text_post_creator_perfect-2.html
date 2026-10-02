@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Text Post Creator</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#111;color:#fff;font-family:Arial,sans-serif}
+.app{max-width:920px;margin:auto;padding:16px}
+h1{font-size:21px;margin:0 0 14px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.panel{background:#1b1b1b;border:1px solid #333;border-radius:14px;padding:15px}
+label{display:block;font-size:13px;color:#bbb;margin:11px 0 6px}
+.editor{min-height:145px;background:#0d0d0d;border:1px solid #444;border-radius:9px;padding:13px;outline:none;line-height:1.4;white-space:pre-wrap;word-break:break-word}
+.toolbar{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.toolbar button{margin:0;min-width:42px;padding:9px;background:#303030;color:#fff;border:1px solid #444;border-radius:7px;font-weight:700}
+.toolbar button.active{background:#fff;color:#000}
+.toolbar button:disabled{opacity:.35;cursor:not-allowed}
+input,select{width:100%;background:#101010;color:#fff;border:1px solid #444;border-radius:8px;padding:10px;font:inherit}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.rangeRow{display:grid;grid-template-columns:1fr 55px;gap:8px;align-items:center}
+.rangeVal{background:#101010;border:1px solid #444;border-radius:7px;padding:8px;text-align:center;font-size:12px;color:#ccc}
+.action{border:0;border-radius:9px;padding:12px 14px;background:#fff;color:#000;font-weight:700;cursor:pointer;margin-top:12px;width:100%}
+.secondary{background:#303030;color:#fff}
+.previewWrap{display:flex;justify-content:center;align-items:center}
+.canvas{width:min(100%,432px);aspect-ratio:9/16;background:#000;position:relative;overflow:hidden}
+.quote{position:absolute;left:50%;top:50%;width:80%;transform:translate(-50%,-50%);text-align:center;white-space:pre-wrap;word-break:break-word;line-height:1.35}
+.hint{font-size:12px;color:#888;margin-top:8px}
+@media(max-width:700px){.grid{grid-template-columns:1fr}.app{padding:10px}}
+</style>
+</head>
+<body>
+<div class="app">
+<h1>Text Post Creator</h1>
+<div class="grid">
+<section class="panel">
+<label>Write your text — select any part to style only that part</label>
+<div class="toolbar" aria-label="Text formatting">
+<button type="button" id="undo" title="Undo last edit">↶ Undo</button>
+<button type="button" id="redo" title="Redo">↷ Redo</button>
+<button type="button" data-cmd="bold"><b>B</b></button>
+<button type="button" data-cmd="italic"><i>I</i></button>
+<button type="button" data-cmd="underline"><u>U</u></button>
+<button type="button" data-cmd="strikeThrough"><s>S</s></button>
+</div>
+<div id="editor" class="editor" contenteditable="true" spellcheck="false">Never force a connection.
+What’s meant for you won’t need begging.</div>
+<div class="hint">Highlight/select a word or sentence, then tap B, I, U or S.</div>
+
+<div class="row">
+<div>
+<label>Font size</label>
+<div class="rangeRow"><input id="size" type="range" min="14" max="60" value="27"><div id="sizeVal" class="rangeVal">27</div></div>
+</div>
+<div>
+<label>Font family</label>
+<select id="font"><option>Arial</option><option>Georgia</option><option>Times New Roman</option><option>Verdana</option><option>Trebuchet MS</option></select>
+</div>
+</div>
+
+<div class="row">
+<div><label>Text color</label><input id="color" type="color" value="#ffffff"></div>
+<div><label>Background</label><input id="bg" type="color" value="#000000"></div>
+</div>
+
+<label>Left / Right</label>
+<div class="rangeRow"><input id="x" type="range" min="5" max="95" value="50"><div id="xVal" class="rangeVal">50%</div></div>
+
+<label>Up / Down</label>
+<div class="rangeRow"><input id="y" type="range" min="5" max="95" value="50"><div id="yVal" class="rangeVal">50%</div></div>
+
+<div class="row">
+<button id="save" class="action" type="button">Save PNG</button>
+<button id="reset" class="action secondary" type="button">Reset</button>
+</div>
+</section>
+
+<section class="panel previewWrap">
+<div id="canvas" class="canvas"><div id="quote" class="quote"></div></div>
+</section>
+</div>
+</div>
+
+<script>
+const editor=document.getElementById('editor');
+const quote=document.getElementById('quote');
+const canvas=document.getElementById('canvas');
+const size=document.getElementById('size'), sizeVal=document.getElementById('sizeVal');
+const font=document.getElementById('font'), color=document.getElementById('color'), bg=document.getElementById('bg');
+const x=document.getElementById('x'), y=document.getElementById('y');
+const xVal=document.getElementById('xVal'), yVal=document.getElementById('yVal');
+
+let savedRange=null;
+let history=[];
+let historyIndex=-1;
+let restoringHistory=false;
+
+function pushHistory(force=false){
+ const state=editor.innerHTML;
+ if(!force && historyIndex>=0 && history[historyIndex]===state) return;
+ history=history.slice(0,historyIndex+1);
+ history.push(state);
+ historyIndex=history.length-1;
+ updateHistoryButtons();
+}
+function updateHistoryButtons(){
+ document.getElementById('undo').disabled=historyIndex<=0;
+ document.getElementById('redo').disabled=historyIndex>=history.length-1;
+}
+function applyHistory(index){
+ if(index<0 || index>=history.length || index===historyIndex)return;
+ restoringHistory=true;
+ editor.innerHTML=history[index];
+ historyIndex=index;
+ restoringHistory=false;
+ savedRange=null;
+ update();
+ updateHistoryButtons();
+}
+
+function saveSelection(){
+ const sel=window.getSelection();
+ if(sel && sel.rangeCount && !sel.isCollapsed && editor.contains(sel.anchorNode) && editor.contains(sel.focusNode)){
+   savedRange=sel.getRangeAt(0).cloneRange();
+ }
+}
+function restoreSelection(){
+ if(!savedRange)return;
+ const sel=window.getSelection();sel.removeAllRanges();sel.addRange(savedRange);
+}
+editor.addEventListener('mouseup',saveSelection);
+editor.addEventListener('keyup',saveSelection);
+editor.addEventListener('touchend',()=>setTimeout(saveSelection,0));
+
+document.querySelectorAll('.toolbar button').forEach(btn=>{
+ btn.addEventListener('mousedown',e=>e.preventDefault());
+ btn.addEventListener('click',()=>{
+   restoreSelection();
+   document.execCommand(btn.dataset.cmd,false,null);
+   saveSelection(); update();
+   pushHistory();
+ });
+});
+
+function update(){
+ sizeVal.textContent=size.value;
+ xVal.textContent=x.value+'%'; yVal.textContent=y.value+'%';
+ canvas.style.background=bg.value;
+ quote.style.left=x.value+'%';quote.style.top=y.value+'%';
+ quote.style.fontSize=size.value+'px';quote.style.fontFamily=font.value;
+ quote.style.color=color.value;
+ quote.style.textAlign='left';
+ quote.innerHTML=editor.innerHTML;
+}
+editor.addEventListener('input',()=>{
+ if(!restoringHistory){
+   pushHistory();
+ }
+ update();
+});
+[size,font,color,bg,x,y].forEach(el=>el.addEventListener('input',update));
+
+document.getElementById('undo').onclick=()=>applyHistory(historyIndex-1);
+document.getElementById('redo').onclick=()=>applyHistory(historyIndex+1);
+
+pushHistory(true);
+update();
+
+document.getElementById('reset').onclick=()=>{
+ editor.innerHTML='Never force a connection.<br>What’s meant for you won’t need begging.';
+ size.value=27;font.value='Arial';color.value='#ffffff';bg.value='#000000';x.value=50;y.value=50;
+ savedRange=null;
+ history=[editor.innerHTML];historyIndex=0;
+ update();updateHistoryButtons();
+};
+
+function drawRichText(){
+ const scale=3,w=432*scale,h=768*scale;
+ const c=document.createElement('canvas'),ctx=c.getContext('2d');
+ c.width=w;c.height=h;ctx.fillStyle=bg.value;ctx.fillRect(0,0,w,h);
+ ctx.textBaseline='middle';
+
+ const root=document.createElement('div');root.innerHTML=editor.innerHTML;
+ const rawLines=[];
+ function walk(node,styles={weight:'400',style:'normal',decoration:'none'}){
+   if(node.nodeType===3){
+     if(node.nodeValue)rawLines.push({t:node.nodeValue,styles:{...styles}});
+     return;
+   }
+   if(node.nodeName==='BR'){rawLines.push({t:'\n',styles:{...styles}});return;}
+   let s={...styles};
+   if(node.nodeName==='B'||node.nodeName==='STRONG')s.weight='700';
+   if(node.nodeName==='I'||node.nodeName==='EM')s.style='italic';
+   if(node.nodeName==='U')s.decoration='underline';
+   if(node.nodeName==='S'||node.nodeName==='STRIKE')s.decoration='line-through';
+   node.childNodes.forEach(n=>walk(n,s));
+ }
+ root.childNodes.forEach(n=>walk(n));
+
+ const base=Number(size.value)*scale,lineH=base*1.35;
+ const maxWidth=w*0.80;
+ const wrapped=[];
+ let line=[];
+
+ function fontFor(st){return `${st.style} ${st.weight} ${base}px ${font.value}`;}
+ function widthOf(text,st){ctx.font=fontFor(st);return ctx.measureText(text).width;}
+ function pushLine(){wrapped.push(line);line=[];}
+ function addText(text,st){
+   // Preserve spaces but wrap at word boundaries; split unusually long words if needed.
+   const tokens=text.match(/\S+\s*|\s+/g)||[];
+   for(const token of tokens){
+     if(!token) continue;
+     const candidate=line.map(x=>x.t).join('')+token;
+     if(line.length && widthOf(candidate,st)>maxWidth){
+       pushLine();
+       const trimmed=token.replace(/^\s+/,'');
+       if(trimmed) {
+         if(widthOf(trimmed,st)<=maxWidth){ line.push({t:trimmed,styles:st}); }
+         else {
+           let part='';
+           for(const ch of trimmed){
+             if(part && widthOf(part+ch,st)>maxWidth){ line.push({t:part,styles:st}); part=ch; }
+             else part+=ch;
+           }
+           if(part) line.push({t:part,styles:st});
+         }
+       }
+     } else {
+       line.push({t:token,styles:st});
+     }
+   }
+ }
+
+ for(const b of rawLines){
+   const parts=b.t.split('\n');
+   parts.forEach((part,i)=>{
+     if(part) addText(part,b.styles);
+     if(i<parts.length-1) pushLine();
+   });
+ }
+ if(line.length || !wrapped.length) pushLine();
+
+ const startX=w*(Number(x.value)/100)-maxWidth/2;
+ let yy=h*(Number(y.value)/100)-(wrapped.length-1)*lineH/2;
+
+ wrapped.forEach(ln=>{
+   let xx=startX;
+   ln.forEach(seg=>{
+     ctx.font=fontFor(seg.styles);
+     ctx.fillStyle=color.value;
+     ctx.textAlign='left';
+     ctx.fillText(seg.t,xx,yy);
+     const mw=ctx.measureText(seg.t).width;
+     if(seg.styles.decoration!=='none'){
+       ctx.beginPath();
+       ctx.lineWidth=Math.max(1,base/18);
+       const dy=seg.styles.decoration==='underline'?yy+base*.35:yy-base*.32;
+       ctx.moveTo(xx,dy);ctx.lineTo(xx+mw,dy);
+       ctx.strokeStyle=color.value;ctx.stroke();
+     }
+     xx+=mw;
+   });
+   yy+=lineH;
+ });
+ return c;
+}
+document.getElementById('save').onclick=()=>{
+ const c=drawRichText(),a=document.createElement('a');
+ a.download='text-post.png';a.href=c.toDataURL('image/png');a.click();
+};
+</script>
+</body>
+</html>
