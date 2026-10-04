@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Quote Card Editor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&family=Montserrat:wght@400;700&family=Playfair+Display:wght@400;700&family=Lora:wght@400;700&family=Merriweather:wght@400;700&family=Oswald:wght@400;700&family=Bebas+Neue&family=Anton&family=Roboto:wght@400;700&family=Open+Sans:wght@400;700&family=Lato:wght@400;700&family=Raleway:wght@400;700&family=Nunito:wght@400;700&family=Quicksand:wght@400;700&family=Cinzel:wght@400;700&family=Cormorant+Garamond:wght@400;700&family=Abril+Fatface&family=Pacifico&family=Dancing+Script:wght@400;700&family=Great+Vibes&family=Satisfy&family=Caveat:wght@400;700&family=Shadows+Into+Light&family=Indie+Flower&family=Permanent+Marker&family=Special+Elite&family=Courier+Prime:wght@400;700&family=Space+Mono:wght@400;700&family=Josefin+Sans:wght@400;700&family=Comfortaa:wght@400;700&family=Righteous&family=Lobster&family=Archivo+Black&family=Bangers&family=Rubik:wght@400;700&family=DM+Serif+Display&family=Yeseva+One&family=Alegreya:wght@400;700&family=Libre+Baskerville:wght@400;700&family=Teko:wght@400;700&family=Exo+2:wght@400;700&family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+  :root{
+    --ui-bg:#0b0d10; --ui-card:#161a1f; --ui-line:#262c33; --ui-text:#e9edf1; --ui-dim:#8b95a1; --ui-accent:#4f8cff;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;background:var(--ui-bg);color:var(--ui-text);font-family:-apple-system,"Segoe UI",Roboto,sans-serif;font-size:14px}
+  body{padding-bottom:40px}
+
+  /* ---------- preview ---------- */
+  .preview-wrap{padding:12px;display:flex;justify-content:center;background:#000;position:sticky;top:0;z-index:20;border-bottom:1px solid var(--ui-line)}
+  .stage{
+    --ar:0.5625;
+    position:relative;width:min(100%,calc((100vh - 330px) * var(--ar)),360px);
+    min-width:180px;
+    aspect-ratio:var(--ar);overflow:hidden;container-type:inline-size;
+    background:#0a0a0c;
+  }
+  .stage .bg-layer{position:absolute;inset:0}
+  .stage .vignette{position:absolute;inset:0;pointer-events:none;
+    background:radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,var(--vig,.5)) 100%)}
+  .top-tag,.bottom-tag{
+    position:absolute;left:0;right:0;text-align:center;
+    font-size:4.2cqw;letter-spacing:1.6cqw;color:#cfcfd4;white-space:nowrap;
+    font-family:"Montserrat",sans-serif;pointer-events:none;
+  }
+  .top-tag{top:6%}
+  .bottom-tag{bottom:6%}
+  .quote-box{
+    position:absolute;left:0;right:0;
+    padding:0 9cqw;
+  }
+  .quote-text{
+    outline:none;min-height:1em;word-break:break-word;
+    font-family:"Poppins",sans-serif;font-size:7.5cqw;line-height:1.45;color:#f2f2f2;
+    white-space:pre-wrap;
+  }
+  .quote-text b,.quote-text strong{font-weight:700;color:var(--bold-color,inherit)}
+  .quote-text mark{background:#f5d90a;color:#000;padding:0 .18em;border-radius:.15em;-webkit-box-decoration-break:clone;box-decoration-break:clone}
+  .quote-text:empty:before{content:"Type your quote...";opacity:.4}
+  .editing .quote-text{outline:1px dashed rgba(79,140,255,.55);outline-offset:6px}
+
+  /* ---------- panel ---------- */
+  .tabs{display:flex;gap:6px;overflow-x:auto;padding:10px 12px 0;scrollbar-width:none}
+  .tabs::-webkit-scrollbar{display:none}
+  .tab{flex:0 0 auto;padding:8px 14px;border-radius:999px;border:1px solid var(--ui-line);background:var(--ui-card);color:var(--ui-dim);font-size:13px}
+  .tab.on{background:var(--ui-accent);border-color:var(--ui-accent);color:#fff}
+  .panel{display:none;padding:12px}
+  .panel.on{display:block}
+  .row{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+  .row label{flex:0 0 92px;color:var(--ui-dim);font-size:12.5px}
+  .row input[type=range]{flex:1;accent-color:var(--ui-accent)}
+  .row .val{flex:0 0 40px;text-align:right;color:var(--ui-dim);font-size:12px}
+  input[type=text],select,textarea{
+    width:100%;background:var(--ui-card);color:var(--ui-text);border:1px solid var(--ui-line);
+    border-radius:10px;padding:10px 12px;font-size:14px;font-family:inherit
+  }
+  input[type=color]{width:44px;height:36px;border:1px solid var(--ui-line);background:var(--ui-card);border-radius:8px;padding:2px}
+  button{font-family:inherit}
+  .btn{padding:10px 14px;border-radius:10px;border:1px solid var(--ui-line);background:var(--ui-card);color:var(--ui-text);font-size:14px}
+  .btn.primary{background:var(--ui-accent);border-color:var(--ui-accent);color:#fff;font-weight:600}
+  .btn.on{border-color:var(--ui-accent);color:var(--ui-accent)}
+  .btn-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+
+  .fonts{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;max-height:46vh;overflow-y:auto;padding-right:2px}
+  .font-item{
+    padding:10px;border-radius:10px;border:1px solid var(--ui-line);background:var(--ui-card);
+    color:var(--ui-text);font-size:17px;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis
+  }
+  .font-item.on{border-color:var(--ui-accent);box-shadow:inset 0 0 0 1px var(--ui-accent)}
+
+  .swatches{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:14px}
+  .sw{aspect-ratio:1;border-radius:10px;border:2px solid var(--ui-line)}
+  .sw.on{border-color:var(--ui-accent)}
+
+  .emojis{display:grid;grid-template-columns:repeat(8,1fr);gap:6px}
+  .emojis button{font-size:22px;padding:6px 0;border-radius:8px;border:1px solid var(--ui-line);background:var(--ui-card)}
+  .hint{color:var(--ui-dim);font-size:12px;margin:0 0 12px;line-height:1.5}
+  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#fff;color:#000;padding:10px 16px;border-radius:999px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:50}
+  .toast.show{opacity:1}
+</style>
+</head>
+<body>
+
+<div class="preview-wrap">
+  <div class="stage editing" id="stage">
+    <div class="bg-layer" id="bg"></div>
+    <div class="vignette" id="vig"></div>
+    <div class="top-tag" id="topTag">Follow to see us again</div>
+    <div class="quote-box" id="quoteBox" style="top:38%">
+      <div class="quote-text" id="quote" contenteditable="true" spellcheck="false">🤔
+A boy can love <b>poor girl,</b> but
+a girl can't love <b>poor boy,</b>
+Why?</div>
+    </div>
+    <div class="bottom-tag" id="botTag">@success.lesson1</div>
+  </div>
+</div>
+
+<div class="tabs" id="tabs">
+  <button class="tab on" data-p="p-text">Text</button>
+  <button class="tab" data-p="p-font">Fonts</button>
+  <button class="tab" data-p="p-style">Style</button>
+  <button class="tab" data-p="p-bg">Background</button>
+  <button class="tab" data-p="p-extra">Tags</button>
+  <button class="tab" data-p="p-emoji">Emoji</button>
+  <button class="tab" data-p="p-save">Save</button>
+</div>
+
+<!-- TEXT -->
+<div class="panel on" id="p-text">
+  <p class="hint">Tap the text on the card to type. Wrap words in <b>**double stars**</b> to make them bold, or <b>==double equals==</b> to highlight them. You can also select words and use the buttons.</p>
+  <div class="btn-row">
+    <button class="btn" id="boldBtn"><b>B</b> Bold</button>
+    <button class="btn" id="clearBold">Unbold all</button>
+  </div>
+  <div class="row"><label>Highlight</label><input type="color" id="hlColor" value="#f5d90a"><button class="btn" id="hlBtn">Highlight selected</button></div>
+  <div class="row"><label>Highlight text</label><input type="color" id="hlText" value="#000000"><button class="btn" id="hlClear">Remove highlights</button></div>
+  <div class="btn-row">
+    <button class="btn" id="alignL">Left</button>
+    <button class="btn" id="alignC">Center</button>
+    <button class="btn" id="alignR">Right</button>
+  </div>
+  <div class="row"><label>Size</label><input type="range" id="size" min="3" max="16" step="0.1" value="7.5"><span class="val" id="sizeV">7.5</span></div>
+  <div class="row"><label>Line height</label><input type="range" id="lh" min="1" max="2.4" step="0.05" value="1.45"><span class="val" id="lhV">1.45</span></div>
+  <div class="row"><label>Letter space</label><input type="range" id="ls" min="-0.5" max="4" step="0.1" value="0" ><span class="val" id="lsV">0</span></div>
+  <div class="row"><label>Up / Down</label><input type="range" id="posY" min="5" max="85" step="0.5" value="38"><span class="val" id="posYV">38</span></div>
+  <div class="row"><label>Side padding</label><input type="range" id="padX" min="2" max="25" step="0.5" value="9"><span class="val" id="padXV">9</span></div>
+</div>
+
+<!-- FONTS -->
+<div class="panel" id="p-font">
+  <p class="hint">Applies to the whole quote. Needs internet to load the fonts.</p>
+  <div class="fonts" id="fontList"></div>
+</div>
+
+<!-- STYLE -->
+<div class="panel" id="p-style">
+  <div class="row"><label>Text color</label><input type="color" id="txtColor" value="#f2f2f2"></div>
+  <div class="row"><label>Bold color</label><input type="color" id="boldColor" value="#ffffff"><button class="btn" id="boldSame">Same as text</button></div>
+  <div class="row"><label>Opacity</label><input type="range" id="txtOp" min="0.3" max="1" step="0.01" value="1"><span class="val" id="txtOpV">1</span></div>
+  <div class="row"><label>Glow</label><input type="range" id="glow" min="0" max="30" step="1" value="0"><span class="val" id="glowV">0</span></div>
+  <div class="row"><label>Glow color</label><input type="color" id="glowColor" value="#4f8cff"></div>
+  <div class="row"><label>Italic</label><button class="btn" id="italicBtn">Toggle italic</button></div>
+  <div class="row"><label>Uppercase</label><button class="btn" id="capsBtn">Toggle caps</button></div>
+</div>
+
+<!-- BACKGROUND -->
+<div class="panel" id="p-bg">
+  <div class="swatches" id="bgSwatches"></div>
+  <div class="row"><label>Color 1</label><input type="color" id="bg1" value="#0a0a0c"></div>
+  <div class="row"><label>Color 2</label><input type="color" id="bg2" value="#1a1a22"></div>
+  <div class="btn-row">
+    <button class="btn on" id="bgSolid">Solid</button>
+    <button class="btn" id="bgLinear">Gradient</button>
+    <button class="btn" id="bgRadial">Radial</button>
+  </div>
+  <div class="row"><label>Angle</label><input type="range" id="bgAngle" min="0" max="360" value="180"><span class="val" id="bgAngleV">180</span></div>
+  <div class="row"><label>Vignette</label><input type="range" id="vigAmt" min="0" max="1" step="0.01" value="0.5"><span class="val" id="vigV">0.5</span></div>
+  <div class="btn-row">
+    <button class="btn" id="bgImgBtn">Add photo behind</button>
+    <button class="btn" id="bgImgClear">Remove photo</button>
+    <input type="file" id="bgFile" accept="image/*" hidden>
+  </div>
+  <div class="row"><label>Photo dim</label><input type="range" id="imgDim" min="0" max="0.95" step="0.01" value="0.6"><span class="val" id="imgDimV">0.6</span></div>
+</div>
+
+<!-- TAGS -->
+<div class="panel" id="p-extra">
+  <div class="row"><label>Top text</label><input type="text" id="topIn" value="Follow to see us again"></div>
+  <div class="row"><label>Bottom text</label><input type="text" id="botIn" value="@success.lesson1"></div>
+  <div class="btn-row">
+    <button class="btn on" id="topToggle">Top: on</button>
+    <button class="btn on" id="botToggle">Bottom: on</button>
+  </div>
+  <div class="row"><label>Tag color</label><input type="color" id="tagColor" value="#cfcfd4"></div>
+  <div class="row"><label>Tag size</label><input type="range" id="tagSize" min="2" max="7" step="0.1" value="4.2"><span class="val" id="tagSizeV">4.2</span></div>
+  <div class="row"><label>Tag spacing</label><input type="range" id="tagLs" min="0" max="3" step="0.1" value="1.6"><span class="val" id="tagLsV">1.6</span></div>
+  <div class="row"><label>Tag font</label>
+    <select id="tagFont"></select>
+  </div>
+</div>
+
+<!-- EMOJI -->
+<div class="panel" id="p-emoji">
+  <p class="hint">Tap in the text where you want it, then pick an emoji.</p>
+  <div class="emojis" id="emojiList"></div>
+</div>
+
+<!-- SAVE -->
+<div class="panel" id="p-save">
+  <div class="row"><label>Aspect ratio</label>
+    <select id="ratio">
+      <option value="9/16" selected>9:16 (TikTok / Reels)</option>
+      <option value="4/5">4:5 (Instagram post)</option>
+      <option value="1/1">1:1 (Square)</option>
+      <option value="3/4">3:4</option>
+      <option value="16/9">16:9 (Landscape)</option>
+    </select>
+  </div>
+  <div class="row"><label>Quality</label>
+    <select id="qual">
+      <option value="1080" selected>HD (1080 wide)</option>
+      <option value="720">Medium (720 wide)</option>
+      <option value="1440">Ultra (1440 wide)</option>
+    </select>
+  </div>
+  <p class="hint" id="sizeInfo"></p>
+  <div class="btn-row">
+    <button class="btn primary" id="saveBtn">Save as PNG</button>
+    <button class="btn" id="resetBtn">Reset</button>
+  </div>
+  <p class="hint">If the download doesn't start on your phone, long-press the image that shows up below and save it.</p>
+  <img id="outImg" style="width:100%;max-width:300px;border-radius:10px;display:none">
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = id => document.getElementById(id);
+const stage = $('stage'), quote = $('quote'), quoteBox = $('quoteBox');
+
+const FONTS = ["Poppins","Montserrat","Playfair Display","Lora","Merriweather","Oswald","Bebas Neue","Anton","Roboto","Open Sans","Lato","Raleway","Nunito","Quicksand","Cinzel","Cormorant Garamond","Abril Fatface","Pacifico","Dancing Script","Great Vibes","Satisfy","Caveat","Shadows Into Light","Indie Flower","Permanent Marker","Special Elite","Courier Prime","Space Mono","Josefin Sans","Comfortaa","Righteous","Lobster","Archivo Black","Bangers","Rubik","DM Serif Display","Yeseva One","Alegreya","Libre Baskerville","Teko","Exo 2","Orbitron"];
+
+/* tabs */
+document.querySelectorAll('.tab').forEach(t=>{
+  t.onclick=()=>{
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));
+    document.querySelectorAll('.panel').forEach(x=>x.classList.remove('on'));
+    t.classList.add('on'); $(t.dataset.p).classList.add('on');
+  };
+});
+
+/* keep text selection when tapping buttons */
+document.querySelectorAll('button').forEach(b=>b.addEventListener('mousedown',e=>e.preventDefault()));
+
+/* fonts */
+const fontList = $('fontList'), tagFont = $('tagFont');
+FONTS.forEach((f,i)=>{
+  const b=document.createElement('button');
+  b.className='font-item'+(i===0?' on':'');
+  b.style.fontFamily=`"${f}", sans-serif`;
+  b.textContent=f;
+  b.onclick=()=>{
+    document.querySelectorAll('.font-item').forEach(x=>x.classList.remove('on'));
+    b.classList.add('on');
+    quote.style.fontFamily=`"${f}", sans-serif`;
+  };
+  fontList.appendChild(b);
+  const o=document.createElement('option'); o.value=f; o.textContent=f;
+  if(f==="Montserrat") o.selected=true;
+  tagFont.appendChild(o);
+});
+tagFont.onchange=()=>{ $('topTag').style.fontFamily=$('botTag').style.fontFamily=`"${tagFont.value}", sans-serif`; };
+
+/* bold */
+$('boldBtn').onclick=()=>{ quote.focus(); document.execCommand('bold'); };
+$('clearBold').onclick=()=>{ quote.innerHTML=quote.innerHTML.replace(/<\/?(b|strong)>/gi,''); };
+quote.addEventListener('paste',e=>{
+  e.preventDefault();
+  const t=(e.clipboardData||window.clipboardData).getData('text/plain');
+  document.execCommand('insertText',false,t);
+});
+
+/* align */
+const setAlign=a=>quote.style.textAlign=a;
+$('alignL').onclick=()=>setAlign('left');
+$('alignC').onclick=()=>setAlign('center');
+$('alignR').onclick=()=>setAlign('right');
+setAlign('left');
+
+/* sliders */
+function bindRange(id,fn,fmt){
+  const el=$(id), v=$(id+'V');
+  const run=()=>{ fn(parseFloat(el.value)); if(v) v.textContent=fmt?fmt(el.value):el.value; };
+  el.addEventListener('input',run); run();
+}
+bindRange('size',v=>quote.style.fontSize=v+'cqw');
+bindRange('lh',v=>quote.style.lineHeight=v);
+bindRange('ls',v=>quote.style.letterSpacing=v*0.1+'cqw');
+bindRange('posY',v=>quoteBox.style.top=v+'%');
+bindRange('padX',v=>quoteBox.style.padding='0 '+v+'cqw');
+
+/* style */
+$('txtColor').oninput=e=>quote.style.color=e.target.value;
+$('boldColor').oninput=e=>quote.style.setProperty('--bold-color',e.target.value);
+$('boldSame').onclick=()=>quote.style.removeProperty('--bold-color');
+bindRange('txtOp',v=>quote.style.opacity=v);
+function glow(){
+  const g=+$('glow').value, c=$('glowColor').value;
+  quote.style.textShadow=g?`0 0 ${g}px ${c}, 0 0 ${g*2}px ${c}`:'none';
+  $('glowV').textContent=g;
+}
+$('glow').oninput=glow; $('glowColor').oninput=glow;
+$('italicBtn').onclick=()=>quote.style.fontStyle=quote.style.fontStyle==='italic'?'normal':'italic';
+$('capsBtn').onclick=()=>quote.style.textTransform=quote.style.textTransform==='uppercase'?'none':'uppercase';
+
+/* background */
+const PRESETS=[
+  ['#0a0a0c','#0a0a0c'],['#000000','#000000'],['#0d1b2a','#1b263b'],['#1a0b2e','#3a0ca3'],
+  ['#2b0a0a','#0a0a0a'],['#0b2b1a','#050505'],['#1f1f1f','#3d3d3d'],['#2a1b0a','#0a0a0a'],
+  ['#0f2027','#2c5364'],['#200122','#6f0000'],['#141e30','#243b55'],['#42275a','#734b6d']
+];
+let bgMode='solid', bgImg=null;
+function drawBg(){
+  const c1=$('bg1').value,c2=$('bg2').value,a=$('bgAngle').value;
+  let css;
+  if(bgMode==='solid') css=c1;
+  else if(bgMode==='linear') css=`linear-gradient(${a}deg,${c1},${c2})`;
+  else css=`radial-gradient(circle at 50% 40%,${c2},${c1})`;
+  const dim=$('imgDim').value;
+  $('bg').style.background = bgImg
+    ? `linear-gradient(rgba(0,0,0,${dim}),rgba(0,0,0,${dim})), url(${bgImg}) center/cover no-repeat`
+    : css;
+  $('bgAngleV').textContent=a;
+}
+PRESETS.forEach(([a,b],i)=>{
+  const s=document.createElement('button');
+  s.className='sw'; s.style.background=`linear-gradient(135deg,${a},${b})`;
+  s.onclick=()=>{
+    document.querySelectorAll('.sw').forEach(x=>x.classList.remove('on')); s.classList.add('on');
+    $('bg1').value=a; $('bg2').value=b;
+    if(a!==b && bgMode==='solid') setMode('linear'); else drawBg();
+  };
+  $('bgSwatches').appendChild(s);
+});
+function setMode(m){
+  bgMode=m;
+  ['Solid','Linear','Radial'].forEach(n=>$('bg'+n).classList.toggle('on',n.toLowerCase()===m));
+  drawBg();
+}
+$('bgSolid').onclick=()=>setMode('solid');
+$('bgLinear').onclick=()=>setMode('linear');
+$('bgRadial').onclick=()=>setMode('radial');
+['bg1','bg2','bgAngle'].forEach(i=>$(i).addEventListener('input',drawBg));
+bindRange('vigAmt',v=>stage.style.setProperty('--vig',v));
+bindRange('imgDim',()=>drawBg());
+$('bgImgBtn').onclick=()=>$('bgFile').click();
+$('bgFile').onchange=e=>{
+  const f=e.target.files[0]; if(!f) return;
+  const r=new FileReader(); r.onload=()=>{ bgImg=r.result; drawBg(); }; r.readAsDataURL(f);
+};
+$('bgImgClear').onclick=()=>{ bgImg=null; drawBg(); };
+drawBg();
+
+/* tags */
+$('topIn').oninput=e=>$('topTag').textContent=e.target.value;
+$('botIn').oninput=e=>$('botTag').textContent=e.target.value;
+function toggle(btn,el,label){
+  btn.onclick=()=>{
+    const on=el.style.display==='none';
+    el.style.display=on?'':'none';
+    btn.classList.toggle('on',on);
+    btn.textContent=label+': '+(on?'on':'off');
+  };
+}
+toggle($('topToggle'),$('topTag'),'Top');
+toggle($('botToggle'),$('botTag'),'Bottom');
+$('tagColor').oninput=e=>{ $('topTag').style.color=$('botTag').style.color=e.target.value; };
+bindRange('tagSize',v=>{ $('topTag').style.fontSize=$('botTag').style.fontSize=v+'cqw'; });
+bindRange('tagLs',v=>{ $('topTag').style.letterSpacing=$('botTag').style.letterSpacing=v+'cqw'; });
+
+/* emoji */
+"🤔 😍 😭 😂 🥺 💔 ❤️ 🔥 💯 😎 🙏 💪 ✨ 🌙 ⭐ 👑 💸 💰 🤝 😤 😔 🥀 🖤 💭 🎯 🚀 ⚡ 🌹 😏 🙄 😌 🫶".split(' ').forEach(e=>{
+  const b=document.createElement('button'); b.textContent=e;
+  b.onclick=()=>{ quote.focus(); document.execCommand('insertText',false,e); };
+  $('emojiList').appendChild(b);
+});
+
+/* ---------- **bold** and ==highlight== typing ---------- */
+function curHL(){ return {bg:$('hlColor').value, fg:$('hlText').value}; }
+function makeMark(text){
+  const m=document.createElement('mark');
+  const c=curHL(); m.style.background=c.bg; m.style.color=c.fg; m.textContent=text; return m;
+}
+function convertMarkers(){
+  const sel=window.getSelection();
+  if(!sel.rangeCount) return;
+  const node=sel.anchorNode;
+  if(!node||node.nodeType!==3||!quote.contains(node)) return;
+  const txt=node.nodeValue;
+  const re=/(\*\*|==)([^*=\n]+?)\1/;
+  const m=re.exec(txt);
+  if(!m) return;
+  const before=txt.slice(0,m.index), after=txt.slice(m.index+m[0].length);
+  let el;
+  if(m[1]==='**'){ el=document.createElement('b'); el.textContent=m[2]; }
+  else el=makeMark(m[2]);
+  const parent=node.parentNode;
+  const beforeN=document.createTextNode(before);
+  const afterN=document.createTextNode(after);
+  parent.insertBefore(beforeN,node);
+  parent.insertBefore(el,node);
+  parent.insertBefore(afterN,node);
+  parent.removeChild(node);
+  // caret after the new element (zero-width space keeps typing outside the styled tag)
+  if(after===''){ afterN.nodeValue='\u200B'; }
+  const r=document.createRange();
+  r.setStart(afterN, after===''?1:0); r.collapse(true);
+  sel.removeAllRanges(); sel.addRange(r);
+}
+quote.addEventListener('input',convertMarkers);
+
+/* highlight buttons */
+$('hlBtn').onclick=()=>{
+  const sel=window.getSelection();
+  if(!sel.rangeCount||sel.isCollapsed||!quote.contains(sel.anchorNode)){ toast('Select some text first'); return; }
+  const range=sel.getRangeAt(0);
+  const frag=range.extractContents();
+  const m=makeMark('');
+  m.appendChild(frag);
+  m.querySelectorAll('mark').forEach(x=>x.replaceWith(...x.childNodes));
+  range.insertNode(m);
+  sel.removeAllRanges();
+};
+$('hlClear').onclick=()=>{
+  quote.querySelectorAll('mark').forEach(x=>x.replaceWith(...x.childNodes));
+  quote.normalize();
+};
+
+/* aspect ratio */
+function applyRatio(){
+  const [w,h]=$('ratio').value.split('/').map(Number);
+  stage.style.setProperty('--ar',(w/h).toFixed(4));
+  updateSizeInfo();
+}
+function outSize(){
+  const [w,h]=$('ratio').value.split('/').map(Number);
+  const q=parseInt($('qual').value), ar=w/h;
+  return ar<=1 ? {w:q,h:Math.round(q/ar)} : {w:Math.round(q*ar),h:q};
+}
+function updateSizeInfo(){ const s=outSize(); $('sizeInfo').textContent='Output: '+s.w+' × '+s.h+' px'; }
+$('ratio').onchange=applyRatio;
+$('qual').onchange=updateSizeInfo;
+applyRatio();
+
+/* save */
+function toast(m){ const t=$('toast'); t.textContent=m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),1800); }
+$('saveBtn').onclick=async()=>{
+  if(typeof html2canvas==='undefined'){ toast('Needs internet to export'); return; }
+  toast('Rendering...');
+  stage.classList.remove('editing');
+  try{
+    if(document.fonts&&document.fonts.ready) await document.fonts.ready;
+    const targetW=outSize().w;
+    const scale=targetW/stage.getBoundingClientRect().width;
+    const canvas=await html2canvas(stage,{scale,backgroundColor:null,useCORS:true,logging:false});
+    const url=canvas.toDataURL('image/png');
+    const img=$('outImg'); img.src=url; img.style.display='block';
+    const a=document.createElement('a'); a.href=url; a.download='quote-card.png';
+    document.body.appendChild(a); a.click(); a.remove();
+    toast('Saved ✓');
+  }catch(err){ toast('Export failed'); console.error(err); }
+  stage.classList.add('editing');
+};
+$('resetBtn').onclick=()=>{ if(confirm('Reset everything?')) location.reload(); };
+</script>
+</body>
+</html>
